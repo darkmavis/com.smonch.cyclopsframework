@@ -1,0 +1,21 @@
+{
+    "name": "Tests",
+    "rootNamespace": "Smonch.CyclopsFramework",
+    "references": [
+        "GUID:51af6d8089abd76428064ce6002ad45d",
+        "GUID:27619889b8ba8c24980f49ee34dbb44a"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
