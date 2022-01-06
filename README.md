@@ -11,7 +11,7 @@ Imagine that you have several coroutine sequences running in parallel and you do
 - What if a sequence is shaped like a tree?
 - What if you could use as many tags as you like and decide which tags should cascade and which tags shouldn't?
 - What if your coroutines provided state management events such as OnEnter, OnExit, and OnUpdate?
-- What if these coroutines could loop for a number of cycles and provide additional events such as OnFirstFrame and OnLastFrame?
+- What if these coroutines could repeat for a number of cycles and provide cycle specific events such as OnFirstFrame and OnLastFrame?
 - What if you could send messages by tag to anything you'd like, no receiver required?
 
 Cyclops Framework was built for these types of situations.
