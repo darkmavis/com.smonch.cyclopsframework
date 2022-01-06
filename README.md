@@ -6,17 +6,19 @@ But why?
 
 Imagine that you have several coroutine sequences running in parallel and you don't know how long they'll take to complete.
 
-What if you could tag these sequences and then stop or pause them by tag?
-What if you wanted to insert cascading tags at various points in a sequence?
-What if a sequence is shaped like a tree?
-What if you could use as many tags as you like and decide which tags should cascade and which tags shouldn't?
-What if your coroutines provided state management events such as OnEnter, OnExit, and OnUpdate?
-What if these coroutines could loop for a given number of cycles and provide additional events such as OnFirstFrame and OnLastFrame?
-And what if you could send messages by tag to anything you'd like, no receiver required?
+- What if you could tag these sequences and then stop or pause them by tag?
+- What if you wanted to insert cascading tags at various points in a sequence?
+- What if a sequence is shaped like a tree?
+- What if you could use as many tags as you like and decide which tags should cascade and which tags shouldn't?
+- What if your coroutines provided state management events such as OnEnter, OnExit, and OnUpdate?
+- What if these coroutines could loop for a number of cycles and provide additional events such as OnFirstFrame and OnLastFrame?
+- What if you could send messages by tag to anything you'd like, no receiver required?
 
-Cyclops Framework was built for these types of situations.  Usage should lead to greater flexibility with less code written.
+Cyclops Framework was built for these types of situations.
+Usage should lead to greater flexibility with less code written.
 
-This project dates back over a decade and was heavily inspired by [Cyclops Framework (for AS3)](https://github.com/darkmavis/CyclopsFramework) from the 2010-2012 Flash era.
+This project dates back over a decade and was heavily inspired by [Cyclops Framework (for AS3)](https://github.com/darkmavis/CyclopsFramework)
+from the 2010-2012 Flash era.
 
 # Installing Cyclops Framework
 
