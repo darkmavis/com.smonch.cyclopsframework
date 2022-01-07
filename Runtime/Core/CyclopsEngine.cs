@@ -20,12 +20,13 @@ using UnityEngine.Assertions;
 
 namespace Smonch.CyclopsFramework
 {
-    public class CyclopsEngine : CyclopsCommon
+    public sealed class CyclopsEngine : CyclopsCommon
     {
         private Dictionary<string, HashSet<ICyclopsTaggable>> _registry;
         private Queue<ICyclopsTaggable> _additions;
         private Queue<ICyclopsTaggable> _removals;
         private Queue<CyclopsRoutine> _routines;
+        private Queue<CyclopsRoutine> _finishedRoutines;
         private Queue<CyclopsStopRoutineRequest> _stopsRequested;
         private Queue<CyclopsMessage> _messages;
         private HashSet<string> _pausesRequested;
@@ -35,10 +36,6 @@ namespace Smonch.CyclopsFramework
         private Dictionary<string, int> _timers;
         private List<float> _timerTimes;
         private bool _nextAdditionIsImmediate = false;
-
-#if DEBUG
-        private System.Diagnostics.Stopwatch _stopwatch;
-#endif
 
         public enum RoutineExceptionScope
         {
@@ -50,9 +47,9 @@ namespace Smonch.CyclopsFramework
             Update_ProcessRoutines
         }
 
-        public event Action<CyclopsRoutine, RoutineExceptionScope, Exception> CaughtRoutineException = (routine, scope, e) => routine.LogException(e);
-        public event Action<CyclopsEngine, CyclopsMessage, Exception> CaughtMessageException = (host, msg, e) => host.LogException(e);
-        public event Action<CyclopsEngine, ICyclopsDisposable, Exception> CaughtDisposableException = (host, disposable, e) => host.LogException(e);
+        public event Action<CyclopsRoutine, RoutineExceptionScope, Exception> RoutineExceptionCaught;
+        public event Action<CyclopsEngine, CyclopsMessage, Exception> MessageExceptionCaught;
+        public event Action<CyclopsEngine, ICyclopsDisposable, Exception> DisposableExceptionCaught;
 
         public float DeltaTime { get; private set; }
         public float Fps => MathF.Round(1f / DeltaTime);
@@ -72,10 +69,19 @@ namespace Smonch.CyclopsFramework
             }
         }
 
+        /// <summary>
+        /// <para>This limits the maximum number of times a CyclopsRoutine can immediately enqueue a new CyclopsRoutine to the active queue on the same frame.</para>
+        /// <para>Failure to provide a limit combined with erroneous code could result in an endless loop.</para>
+        /// <para>Regardless of this failsafe, good practice is to use Immediately.Add() only when required and with plenty of caution.</para>
+        /// <para>Raise this limit to a value higher than 1 in order to enable nesting.</para>
+        /// </summary>
+        public int MaxNestingDepth { get; set; } = 1;
+
         public CyclopsEngine(int initialCapacity = 256)
         {
             _registry = new Dictionary<string, HashSet<ICyclopsTaggable>>(initialCapacity);
             _routines = new Queue<CyclopsRoutine>(initialCapacity);
+            _finishedRoutines = new Queue<CyclopsRoutine>(initialCapacity);
             _additions = new Queue<ICyclopsTaggable>(initialCapacity);
             _removals = new Queue<ICyclopsTaggable>(initialCapacity);
             _stopsRequested = new Queue<CyclopsStopRoutineRequest>(initialCapacity);
@@ -86,13 +92,15 @@ namespace Smonch.CyclopsFramework
             _autotags = new HashSet<string>();
             _timers = new Dictionary<string, int>(initialCapacity);
             _timerTimes = new List<float>(initialCapacity);
-#if DEBUG
-            _stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            _stopwatch.Stop();
-#endif
+
+            RoutineExceptionCaught += CyclopsEngine_RoutineExceptionCaught;
+            MessageExceptionCaught += CyclopsEngine_MessageExceptionCaught;
+            DisposableExceptionCaught += CyclopsEngine_DisposableExceptionCaught;
+
             BeginAutotag(Tag_All);
             Add(new CyclopsRoutine(period: float.MaxValue, cycles: 1f, bias: null, tag: Tag_Sentinel));
         }
+
 
         public void Dispose()
         {
@@ -103,6 +111,7 @@ namespace Smonch.CyclopsFramework
 
             _registry.Clear();
             _routines.Clear();
+            _finishedRoutines.Clear();
             _additions.Clear();
             _removals.Clear();
             _stopsRequested.Clear();
@@ -113,6 +122,25 @@ namespace Smonch.CyclopsFramework
             _autotags.Clear();
             _timers.Clear();
             _timerTimes.Clear();
+
+            RoutineExceptionCaught -= CyclopsEngine_RoutineExceptionCaught;
+            MessageExceptionCaught -= CyclopsEngine_MessageExceptionCaught;
+            DisposableExceptionCaught -= CyclopsEngine_DisposableExceptionCaught;
+        }
+
+        private void CyclopsEngine_DisposableExceptionCaught(CyclopsEngine engine, ICyclopsDisposable disposable, Exception e)
+        {
+            engine.LogException(e);
+        }
+
+        private void CyclopsEngine_MessageExceptionCaught(CyclopsEngine engine, CyclopsMessage msg, Exception e)
+        {
+            engine.LogException(e);
+        }
+
+        private void CyclopsEngine_RoutineExceptionCaught(CyclopsRoutine routine, RoutineExceptionScope scope, Exception e)
+        {
+            routine.LogException(e);
         }
 
         // Sequencing Tags
@@ -150,7 +178,17 @@ namespace Smonch.CyclopsFramework
             if (_nextAdditionIsImmediate)
             {
                 _nextAdditionIsImmediate = false;
-                ProcessAddition(routine);
+
+                if (Context == null)
+                    routine.NestingDepth = 1;
+                else
+                    routine.NestingDepth = Context.NestingDepth + 1;
+                
+                Assert.IsTrue(routine.NestingDepth <= MaxNestingDepth,
+                    $"Couldn't add {nameof(routine)}:{routine.GetType()} because nesting depth was exceeded. MaxNestingDepth: {MaxNestingDepth} Actual: {routine.NestingDepth}");
+
+                if (routine.NestingDepth <= MaxNestingDepth)
+                    ProcessAddition(routine);
             }
             else
             {
@@ -230,7 +268,7 @@ namespace Smonch.CyclopsFramework
                 }
                 catch (Exception e)
                 {
-                    CaughtRoutineException((CyclopsRoutine)taggedObject, RoutineExceptionScope.Stop_Remove, e);
+                    RoutineExceptionCaught((CyclopsRoutine)taggedObject, RoutineExceptionScope.Stop_Remove, e);
                 }
             }
             else
@@ -308,6 +346,8 @@ namespace Smonch.CyclopsFramework
             results.Sort();
         }
 
+        // TODO: This is outdated now. Can be simplified.
+        // Was designed to handle status reports from within at any time.
         public void CopyRoutinesToList(List<CyclopsRoutine> routines)
         {
             routines.Clear();
@@ -407,7 +447,7 @@ namespace Smonch.CyclopsFramework
             }
             catch (Exception e)
             {
-                CaughtMessageException(this, msg, e);
+                MessageExceptionCaught(this, msg, e);
             }
         }
 
@@ -427,26 +467,25 @@ namespace Smonch.CyclopsFramework
         private void ProcessRoutines(float deltaTime)
         {
             Assert.IsTrue(ValidateTimingValue(deltaTime, out var reason), reason);
-#if DEBUG
-            _stopwatch.Restart();
-#endif
-            int routineCount = _routines.Count;
-
-            for (int i = 0; i < routineCount; ++i)
+            
+            while (_routines.Count > 0)
             {
                 var routine = _routines.Dequeue();
 
-                // NOTE: ProcessRemovals() handles removals.
-                _routines.Enqueue(routine);
                 Context = routine;
+                _finishedRoutines.Enqueue(routine);
                 
                 try
                 {
                     routine.Update(deltaTime);
+
+                    // The possibility of an infinite loop caused by nesting Immediately.Add() has passed
+                    // unless someone goes out of their way to modify NestingDepth... don't do that.
+                    routine.NestingDepth = 0;
                 }
                 catch (Exception updateException)
                 {
-                    CaughtRoutineException(routine, RoutineExceptionScope.Update_ProcessRoutines, updateException);
+                    RoutineExceptionCaught(routine, RoutineExceptionScope.Update_ProcessRoutines, updateException);
 
                     try
                     {
@@ -454,18 +493,16 @@ namespace Smonch.CyclopsFramework
                     }
                     catch (Exception stopException)
                     {
-                        CaughtRoutineException(routine, RoutineExceptionScope.Stop_ProcessRoutines, stopException);
+                        RoutineExceptionCaught(routine, RoutineExceptionScope.Stop_ProcessRoutines, stopException);
                     }
                 }
-#if DEBUG
-                Assert.IsTrue(_stopwatch.ElapsedMilliseconds < 2000, $"ProcessRoutines took too long to execute.  Routines in queue: {_routines.Count}");
-                _stopwatch.Stop();
-#endif
-                // AddNow() can enqueue new routines.  Proceed with caution.
-                routineCount = _routines.Count;
             }
 
             Context = null;
+
+            var tmp = _routines;
+            _routines = _finishedRoutines;
+            _finishedRoutines = tmp;
         }
 
         private void ProcessMessages(CyclopsMessage.DeliveryStage stage)
@@ -507,7 +544,7 @@ namespace Smonch.CyclopsFramework
                             }
                             catch (Exception e)
                             {
-                                CaughtRoutineException(routine, RoutineExceptionScope.Stop_ProcessStopRequests, e);
+                                RoutineExceptionCaught(routine, RoutineExceptionScope.Stop_ProcessStopRequests, e);
                             }
 
                             if (request.stopChildren)
@@ -543,7 +580,7 @@ namespace Smonch.CyclopsFramework
                     }
                     catch (Exception e)
                     {
-                        CaughtDisposableException(this, (ICyclopsDisposable)removal, e);
+                        DisposableExceptionCaught(this, (ICyclopsDisposable)removal, e);
                     }
                 }
             }
@@ -601,7 +638,7 @@ namespace Smonch.CyclopsFramework
                     }
                     catch (Exception e)
                     {
-                        CaughtRoutineException(routine, RoutineExceptionScope.Dispose_ProcessRemovals, e);
+                        RoutineExceptionCaught(routine, RoutineExceptionScope.Dispose_ProcessRemovals, e);
                     }
                 }
             }
@@ -651,7 +688,7 @@ namespace Smonch.CyclopsFramework
                     }
                     catch (Exception e)
                     {
-                        CaughtRoutineException((CyclopsRoutine)additionCandidate, RoutineExceptionScope.SkipPredicate_ProcessAdditions, e);
+                        RoutineExceptionCaught((CyclopsRoutine)additionCandidate, RoutineExceptionScope.SkipPredicate_ProcessAdditions, e);
                     }
 
                     if (result)

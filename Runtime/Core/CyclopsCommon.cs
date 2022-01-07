@@ -36,7 +36,7 @@ namespace Smonch.CyclopsFramework
         public const string Tag_Loop = TagPrefix_Cyclops + "Loop";
         public const string Tag_LoopWhile = TagPrefix_Cyclops + "LoopWhile";
         public const string Tag_Sentinel = TagPrefix_Cyclops + "Sentinel";
-
+        
         /// <summary>
         /// This provides a reference to the CyclopsEngine host.
         /// </summary>
