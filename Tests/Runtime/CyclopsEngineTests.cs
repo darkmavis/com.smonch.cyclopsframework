@@ -33,12 +33,12 @@ namespace Smonch.CyclopsFramework
         private const string ValidTag = "test";
         private const string ValidMessageName = "TestMessage";
         private const string ValidMessageSender = "sender";
-        
+
         private static string[] InvalidTags => new[]
         {
             "", " ", "\t", "\r", "\v", "\f", "\n", "\t\t", "\t\n\t", "\t  \n  \t"
         };
-        
+
         //private static string[] ValidTags => new[]
         //{
         //    "\t\n!\n\t!\n",
@@ -57,13 +57,13 @@ namespace Smonch.CyclopsFramework
         //    "0___Abc123___9",
         //    string.Join("", Enumerable.Repeat("0123456789ABCDEF", 17))
         //};
-        
+
         //private static object[] ValidMessageSenders => new[]
         //{
         //    "", " ", "__a", "Foo", "123",
         //    0, new object(), new[] { 1, 2, 3 },
         //};
-        
+
         private static float[] ValidDeltaTimes => new[] {
             float.MaxValue,
             CyclopsCommon.MaxDeltaTime,
@@ -90,6 +90,7 @@ namespace Smonch.CyclopsFramework
         [SetUp]
         public void OnSetup()
         {
+            LogAssert.ignoreFailingMessages = false;
             Host = new CyclopsEngine();
         }
 
@@ -108,7 +109,7 @@ namespace Smonch.CyclopsFramework
         {
             Host.Nop();
             Host.Update(deltaTime);
-            
+
             Assert.NotZero(Host.Count(CyclopsCommon.Tag_Nop));
         }
 
@@ -121,7 +122,7 @@ namespace Smonch.CyclopsFramework
         {
             Host.Nop();
             Host.Update(deltaTime);
-            
+
             Assert.NotZero(Host.Count(tag));
         }
 
@@ -137,7 +138,7 @@ namespace Smonch.CyclopsFramework
 
             Assert.NotZero(Host.Count(tag));
         }
-        
+
         [Test]
         [Category("Smoke")]
         [Category("Updates")]
@@ -146,8 +147,8 @@ namespace Smonch.CyclopsFramework
         {
             int x = 2;
 
-            Host.Add(() => { x -= 1; })
-                .Add(() => { x -= 1; });
+            Host.Add(() => --x)
+                .Add(() => --x);
 
             Host.Update(deltaTime); // Added
             Host.Update(deltaTime); // --x == 1
@@ -167,6 +168,97 @@ namespace Smonch.CyclopsFramework
 
         [Test]
         [Category("Smoke")]
+        [Category("Nested Routines")]
+        public void ImmediatelyAdd_OneNopWithDefaultMaxNestingDepthOfOne_DoesNotThrowAssertionException(
+            [Values(MaxDeltaTime)] float deltaTime)
+        {
+            Host.Immediately.Nop();
+
+            Assert.DoesNotThrow(() => Host.Update(CyclopsCommon.MaxDeltaTime));
+        }
+
+        [Test]
+        [Category("Smoke")]
+        [Category("Nested Routines")]
+        public void ImmediatelyAdd_TwoNestedRoutinesWithDefaultMaxNestingDepthOfOne_ThrowsAssertionException(
+            [Values(MaxDeltaTime)] float deltaTime)
+        {
+            bool isOkA = false;
+            bool isOkB = false;
+            bool wasCaught = false;
+
+            Host.Immediately.Add(() => { isOkA = true; Host.Immediately.Add(() => isOkB = true); });
+            Host.RoutineExceptionCaught += (r, s, e) => { wasCaught = e is UnityEngine.Assertions.AssertionException; };
+
+            LogAssert.ignoreFailingMessages = true;
+            Host.Update(CyclopsCommon.MaxDeltaTime);
+            LogAssert.ignoreFailingMessages = false;
+
+            Assert.IsTrue(wasCaught && isOkA && !isOkB);
+        }
+
+        [Test]
+        [Category("Smoke")]
+        [Category("Nested Routines")]
+        public void ImmediatelyAdd_FiveNestedRoutinesWithDefaultMaxNestingDepthOfFive_DoesNotThrowAndDecrementsToZero(
+            [Values(MaxDeltaTime)] float deltaTime)
+        {
+            int x = 5;
+
+            Host.MaxNestingDepth = 5;
+
+            // Please note: Real world code is not going to look anything like this... unless you really want it to.
+            // The actual problem would most likely present itself in an overridden CyclopsRoutine virtual method
+            // and look all nice, spiffy, and totally legit.
+            Host.Immediately.Add(() => {
+                --x; Host.Immediately.Add(() => {
+                    --x; Host.Immediately.Add(() => {
+                        --x; Host.Immediately.Add(() => {
+                            --x; Host.Immediately.Add(() => {
+                                --x;
+                            });
+                        });
+                    });
+                });
+            });
+
+            Assert.DoesNotThrow(() => Host.Update(CyclopsCommon.MaxDeltaTime));
+            Assert.Zero(x);
+        }
+
+        [Test]
+        [Category("Smoke")]
+        [Category("Nested Routines")]
+        public void ImmediatelyAdd_ThreeNestedRoutinesWithDefaultMaxNestingDepthOfTwo_ThrowsAssertionException(
+            [Values(MaxDeltaTime)] float deltaTime)
+        {
+            bool isOkA = false;
+            bool isOkB = false;
+            bool isOkC = false;
+            bool wasCaught = false;
+
+            Host.MaxNestingDepth = 2;
+
+            // Please note: Real world code is not going to look anything like this... unless you really want it to.
+            // The actual problem would most likely present itself in an overridden CyclopsRoutine virtual method
+            // and look all nice, spiffy, and totally legit.
+            Host.Immediately.Add(() => {
+                isOkA = true; Host.Immediately.Add(() => {
+                    isOkB = true; Host.Immediately.Add(() => {
+                        isOkC = true;
+            }); }); });
+
+            Host.RoutineExceptionCaught += (r, s, e) => { wasCaught = e is UnityEngine.Assertions.AssertionException; };
+
+            LogAssert.ignoreFailingMessages = true;
+            Host.Update(CyclopsCommon.MaxDeltaTime);
+            LogAssert.ignoreFailingMessages = false;
+
+            Assert.IsTrue(wasCaught && isOkA && isOkB & !isOkC);
+        }
+
+        [Test]
+        [Category("Smoke")]
         [Category("Messages")]
         public void SendMessage_WithInvalidReceiverTag_ThrowsAssertionException(
 
@@ -176,7 +268,7 @@ namespace Smonch.CyclopsFramework
             [Values(CyclopsMessage.DeliveryStage.AfterRoutines)] CyclopsMessage.DeliveryStage stage,
             [Values(Timeout_TwiceMaxDeltaTime)] float listenerTimeOut,
             [Values(MaxDeltaTime)] float deltaTime)
-        {   
+        {
             Assert.Throws(typeof(UnityEngine.Assertions.AssertionException), () => Host.Send(receiverTag, name, sender, data: null, stage));
         }
 
@@ -191,7 +283,7 @@ namespace Smonch.CyclopsFramework
             [Values(CyclopsMessage.DeliveryStage.AfterRoutines)] CyclopsMessage.DeliveryStage stage,
             [Values(Timeout_TwiceMaxDeltaTime)] float listenerTimeOut,
             [Values(MaxDeltaTime)] float deltaTime)
-        {   
+        {
             bool wasReceived = false;
 
             Host.Immediately
@@ -233,7 +325,7 @@ namespace Smonch.CyclopsFramework
 
                 Host.Send(tag, name, sender, data: null, stage);
             }
-            
+
             Host.Update(deltaTime);
 
             int expectedInterceptionCount = receiverCountPerTag * uniqueTagCount;
@@ -251,7 +343,7 @@ namespace Smonch.CyclopsFramework
             [Values(CyclopsMessage.DeliveryStage.AfterRoutines)] CyclopsMessage.DeliveryStage stage,
             [Values(Timeout_TwiceMaxDeltaTime)] float listenerTimeOut,
             [Values(MaxDeltaTime)] float deltaTime)
-        {   
+        {
             bool wasReceived = false;
 
             Host.Listen(receiverTag, name, listenerTimeOut)

@@ -40,6 +40,8 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         private Action FailureHandler { get; set; }
         
+        internal int NestingDepth { get; set; }
+
         /// <summary>
         /// This is used by CyclopsEngine and provides a way to skip adding this routine to the active queue if the specified condition is met.
         /// If needed, use CyclopsCommon.SkipIf to provide a condition.
