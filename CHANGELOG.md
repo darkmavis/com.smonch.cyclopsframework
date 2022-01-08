@@ -1,4 +1,7 @@
 # Changelog
+## [0.2.1] - 2022-01-07
+###Fixed
+- Fixed several code compatibility issues affecting earlier versions of Unity.
 ## [0.2.0] - 2022-01-07
 ###Added
 - Added additional smoke tests to better validate CyclopsEngine.Immediate.Add() functionality.

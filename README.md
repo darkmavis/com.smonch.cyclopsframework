@@ -38,10 +38,9 @@ That said, the AS3 version provides a decent overview even if it's not coming fr
 
 This version of Cyclops Framework is compatible with the following versions of Unity:
 
-* 2021 - Verified
-* 2020 LTS - Expected
-* 2019 LTS - Expected
-* 2018 LTS - Likely
+* 2021
+* 2020 LTS
+* 2019 LTS
 
 ## Package contents
 
@@ -56,6 +55,7 @@ The following table indicates the folder structure of the Cyclops Framework pack
 
 |Date|Reason|
 |---|---|
+|January 7, 2022|Updated Unity compatibility details after testing each version of Unity. Matches package version 0.2.1|
 |January 6, 2022|Added mention of potentially helpful AS3 documentation. Matches package version 0.1.1|
 |January 5, 2022|Document created. Matches package version 0.1.0|
 

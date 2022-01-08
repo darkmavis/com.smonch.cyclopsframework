@@ -73,7 +73,7 @@ namespace Smonch.CyclopsFramework
             {
                 if (_tagsAreDirty)
                 {
-                    _cachedCsvTagsText = string.Join(',', Tags);
+                    _cachedCsvTagsText = string.Join(",", Tags);
                     _tagsAreDirty = false;
                 }
 

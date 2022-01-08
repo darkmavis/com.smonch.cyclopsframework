@@ -25,9 +25,9 @@ namespace Smonch.CyclopsFramework
         public const float MaxDeltaTime = .25f;
         public const string MessagePrefix_Cyclops = "Cyclops";
         public const string Message_Analytics = MessagePrefix_Cyclops + "Analytics";
-        public const char TagAttributeDelimiter = ':';
-        public const char TagPrefix_Attribute = '@';
-        public const char TagPrefix_Noncascading = '!';
+        public const string TagAttributeDelimiter = ":";
+        public const string TagPrefix_Attribute = "@";
+        public const string TagPrefix_Noncascading = "!";
         public const string TagPrefix_Cyclops = "!cf.";
         public const string Tag_All = "*";
         public const string Tag_Logging = TagPrefix_Cyclops + "Logging";
@@ -79,33 +79,35 @@ namespace Smonch.CyclopsFramework
         /// <returns>Returns false if validation fails, otherwise returns true.</returns>
         protected bool ValidateTimingValue(double timingValue, out string reason)
         {
-            reason = null;
+            bool result;
 
             if (double.IsInfinity(timingValue))
             {
                 reason = "Timing value must be a finite.";
-                return false;
+                result = false;
             }
-
-            if (double.IsNaN(timingValue))
+            else if (double.IsNaN(timingValue))
             {
                 reason = "Timing value must be a number.";
-                return false;
+                result = false;
             }
-
-            if (double.IsNegative(timingValue))
+            else if (timingValue < 0d)
             {
                 reason = "Timing value must be positive.";
-                return false;
+                result = false;
             }
-
-            if (timingValue == 0d)
+            else if (timingValue == 0d)
             {
                 reason = "Timing value must be greater than zero.";
-                return false;
+                result = false;
+            }
+            else
+            {
+                reason = null;
+                result = true;
             }
             
-            return true;
+            return result;
         }
 
         /// <summary>
@@ -117,27 +119,30 @@ namespace Smonch.CyclopsFramework
         /// <returns>Returns false if validation fails, otherwise returns true.</returns>
         protected bool ValidateTimingValueWhereZeroIsOk(double timingValue, out string reason)
         {
-            reason = null;
-            
+            bool result;
+
             if (double.IsInfinity(timingValue))
             {
                 reason = "Timing value must be a finite.";
-                return false;
+                result = false;
             }
-
-            if (double.IsNaN(timingValue))
+            else if (double.IsNaN(timingValue))
             {
                 reason = "Timing value must be a number.";
-                return false;
+                result = false;
             }
-
-            if (double.IsNegative(timingValue))
+            else if (timingValue < 0d)
             {
                 reason = "Timing value must be positive.";
-                return false;
+                result = false;
             }
-            
-            return true;
+            else
+            {
+                reason = null;
+                result = true;
+            }
+
+            return result;
         }
 
         /// <summary>
