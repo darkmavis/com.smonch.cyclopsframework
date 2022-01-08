@@ -20,6 +20,7 @@ using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Smonch.CyclopsFramework.Extensions;
 
 namespace Smonch.CyclopsFramework
 {
@@ -100,7 +101,7 @@ namespace Smonch.CyclopsFramework
             Host.Dispose();
             Host = null;
         }
-
+        
         [Test]
         [Category("Smoke")]
         [Category("Tags")]

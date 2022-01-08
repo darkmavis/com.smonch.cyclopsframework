@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace Smonch.CyclopsFramework
@@ -52,7 +53,7 @@ namespace Smonch.CyclopsFramework
         public event Action<CyclopsEngine, ICyclopsDisposable, Exception> DisposableExceptionCaught;
 
         public float DeltaTime { get; private set; }
-        public float Fps => MathF.Round(1f / DeltaTime);
+        public float Fps => Mathf.Round(1f / DeltaTime);
 
         /// <summary>
         /// <para>Immediately allows a chained Add method (e.g. Engine.Immediately.Add(foo)) to be processed at the end of either the current or next ProcessRoutines call.</para>
@@ -732,7 +733,7 @@ namespace Smonch.CyclopsFramework
                 if (secondsRemaining > 0f)
                 {
                     secondsRemaining -= deltaTime;
-                    secondsRemaining = Math.Max(0f, secondsRemaining);
+                    secondsRemaining = Mathf.Max(0f, secondsRemaining);
                     _timerTimes[i] = secondsRemaining;
                 }
             }
@@ -746,7 +747,7 @@ namespace Smonch.CyclopsFramework
             // Further timing checks after this one only apply to release builds.
             Assert.IsTrue(ValidateTimingValue(deltaTime, out var reason), reason);
             
-            DeltaTime = Math.Clamp(deltaTime, float.Epsilon, MaxDeltaTime);
+            DeltaTime = Mathf.Clamp(deltaTime, float.Epsilon, MaxDeltaTime);
 
             ProcessTimers(deltaTime);
             ProcessMessages(CyclopsMessage.DeliveryStage.BeforeRoutines);

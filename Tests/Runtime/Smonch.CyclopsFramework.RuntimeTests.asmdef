@@ -1,5 +1,5 @@
 {
-    "name": "Tests",
+    "name": "Smonch.CyclopsFramework.RuntimeTests",
     "rootNamespace": "Smonch.CyclopsFramework",
     "references": [
         "GUID:51af6d8089abd76428064ce6002ad45d",

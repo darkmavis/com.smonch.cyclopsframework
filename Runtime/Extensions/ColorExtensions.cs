@@ -14,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#if UNITY_2017_4_OR_NEWER
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
@@ -56,4 +55,3 @@ namespace Smonch.CyclopsFramework.Extensions
         }
     }
 }
-#endif

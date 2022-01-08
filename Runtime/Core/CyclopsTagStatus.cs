@@ -27,9 +27,9 @@ namespace Smonch.CyclopsFramework
         {
             if ((tag != null) && (other.tag != null))
             {
-                if (tag.StartsWith('*'))
+                if (tag.StartsWith("*"))
                     return -1;
-                else if (other.tag.StartsWith('*'))
+                else if (other.tag.StartsWith("*"))
                     return 1;
             }
 

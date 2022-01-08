@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System;
 using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace Smonch.CyclopsFramework
 {
@@ -62,15 +62,14 @@ namespace Smonch.CyclopsFramework
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float SquareWave(float t) => (t < 0.5f) ? 0f : 1f;
 
-#if UNITY_2017_4_OR_NEWER
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float Noise(float t) => UnityEngine.Random.value;
-#endif
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float Cos01(float t) => 0.5f + MathF.Sin((t * 2f - 0.5f) * MathF.PI) * 0.5f;
+        public static float Noise(float t) => Random.value;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float Sin01(float t) => 0.5f + MathF.Sin((t * 2f - 0.5f) * MathF.PI) * 0.5f;
+        public static float Cos01(float t) => 0.5f + Mathf.Sin((t * 2f - 0.5f) * Mathf.PI) * 0.5f;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float Sin01(float t) => 0.5f + Mathf.Sin((t * 2f - 0.5f) * Mathf.PI) * 0.5f;
         
         /// <summary>
         /// Ensures: sign(f(t)) == sign(t)
@@ -79,7 +78,7 @@ namespace Smonch.CyclopsFramework
         /// <param name="t"></param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float CorrectSign(Func<float, float> f, float t)
+        public static float CorrectSign(System.Func<float, float> f, float t)
         {
             if (t < 0f)
             {

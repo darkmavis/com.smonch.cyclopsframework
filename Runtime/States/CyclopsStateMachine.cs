@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using Smonch.CyclopsFramework.Extensions;
 using System.Collections.Generic;
 
 namespace Smonch.CyclopsFramework
@@ -31,13 +32,15 @@ namespace Smonch.CyclopsFramework
 
         public void Update()
         {
-            if (!_stateStack.TryPeek(out var activeState))
+            if (_stateStack.Count == 0)
             {
                 IsIdle = true;
             }
             else
             {
                 IsIdle = false;
+
+                var activeState = _stateStack.Peek();
 
                 if (_stateStack.Count > 1)
                 {
