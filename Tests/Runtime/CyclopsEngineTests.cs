@@ -186,16 +186,11 @@ namespace Smonch.CyclopsFramework
         {
             bool isOkA = false;
             bool isOkB = false;
-            bool wasCaught = false;
 
             Host.Immediately.Add(() => { isOkA = true; Host.Immediately.Add(() => isOkB = true); });
-            Host.RoutineExceptionCaught += (r, s, e) => { wasCaught = e is UnityEngine.Assertions.AssertionException; };
 
-            LogAssert.ignoreFailingMessages = true;
-            Host.Update(CyclopsCommon.MaxDeltaTime);
-            LogAssert.ignoreFailingMessages = false;
-
-            Assert.IsTrue(wasCaught && isOkA && !isOkB);
+            Assert.Throws<UnityEngine.Assertions.AssertionException>(() => Host.Update(CyclopsCommon.MaxDeltaTime));
+            Assert.IsTrue(isOkA && !isOkB);
         }
 
         [Test]
@@ -236,7 +231,6 @@ namespace Smonch.CyclopsFramework
             bool isOkA = false;
             bool isOkB = false;
             bool isOkC = false;
-            bool wasCaught = false;
 
             Host.MaxNestingDepth = 2;
 
@@ -249,13 +243,8 @@ namespace Smonch.CyclopsFramework
                         isOkC = true;
             }); }); });
 
-            Host.RoutineExceptionCaught += (r, s, e) => { wasCaught = e is UnityEngine.Assertions.AssertionException; };
-
-            LogAssert.ignoreFailingMessages = true;
-            Host.Update(CyclopsCommon.MaxDeltaTime);
-            LogAssert.ignoreFailingMessages = false;
-
-            Assert.IsTrue(wasCaught && isOkA && isOkB & !isOkC);
+            Assert.Throws<UnityEngine.Assertions.AssertionException>(() => Host.Update(CyclopsCommon.MaxDeltaTime));
+            Assert.IsTrue(isOkA && isOkB & !isOkC);
         }
 
         [Test]
