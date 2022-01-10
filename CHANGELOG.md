@@ -1,4 +1,8 @@
 # Changelog
+## [0.3.0] - 2022-01-09
+###Changed
+- Removed CyclopsEngine sentinel code.  It was used to maintain proper order in status reports but isn't really needed.
+- Removed exception wrapping code in CyclopsEngine.  Couldn't justify general purpose usage.  Wrap from the outside if needed.
 ## [0.2.1] - 2022-01-07
 ###Fixed
 - Fixed several code compatibility issues affecting earlier versions of Unity.
