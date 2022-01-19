@@ -1,4 +1,10 @@
 # Changelog
+## [0.4.0] - 2022-01-19
+- Added two pause and resume smoke tests with several variants each.
+- Fixed pause and resume functionality was unintentionally disabled during the refactoring process.  Caught this with the new smoke tests.  It's working properly now.
+- Changed pooling data structures used for collections within CyclopsRoutine.  Queue was replaced with ConcurrentBag for improved thread safety.  The main thread is still the primary use case and that's what ConcurrentBag is optimized for... no locking overhead.  Note: It's likely that built-in pooling functionality will be added to CyclopsRoutine in order to minimize allocations and garbage collection.
+- Changed several routines that still weren't using const string Tag.  They are now.
+- Changed several CyclopsCommon sugar methods were returning a CyclopsRoutine.  They now return their specific type.  This provides transparency and will automatically expose any unique functionality those classes may have now or in the future.
 ## [0.3.0] - 2022-01-09
 ###Changed
 - Removed CyclopsEngine sentinel code.  It was used to maintain proper order in status reports but isn't really needed.

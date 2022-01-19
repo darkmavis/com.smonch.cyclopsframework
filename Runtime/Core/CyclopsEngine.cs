@@ -399,14 +399,20 @@ namespace Smonch.CyclopsFramework
             while (_routines.Count > 0)
             {
                 var routine = _routines.Dequeue();
-
-                Context = routine;
+                
                 _finishedRoutines.Enqueue(routine);
-                routine.Update(deltaTime);
 
-                // The possibility of an infinite loop caused by nesting Immediately.Add() has passed
-                // unless someone goes out of their way to modify NestingDepth... don't do that.
-                routine.NestingDepth = 0;
+                // Note: If paused routines were removed from this list and added to a holding collection like say a HashSet,
+                // they'd typically lose their position in the queue when later resumed.  Deterministic ordering is a nice thing to have.
+                if (!routine.IsPaused)
+                {
+                    Context = routine;
+                    routine.Update(deltaTime);
+
+                    // The possibility of an infinite loop caused by nesting Immediately.Add() has passed
+                    // unless someone goes out of their way to modify NestingDepth... don't do that.
+                    routine.NestingDepth = 0;
+                }
             }
 
             Context = null;

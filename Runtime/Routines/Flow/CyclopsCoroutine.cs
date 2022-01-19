@@ -21,15 +21,9 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsCoroutine : CyclopsRoutine
     {
-        public static readonly string Tag = TagPrefix_Cyclops + "CyclopsCoroutine";
+        public const string Tag = TagPrefix_Cyclops + "CyclopsCoroutine";
 
         Func<IEnumerator> _f;
-
-        //public CyclopsCoroutine Instantiate(double.MaxValue, 1, null, Tag)
-        //{
-        //    UnityEngine.Pool.ObjectPool<CyclopsCoroutine>.Get(out var instance);
-
-        //}
         
         public CyclopsCoroutine(Func<IEnumerator> f)
             : base(double.MaxValue, 1, null, Tag)

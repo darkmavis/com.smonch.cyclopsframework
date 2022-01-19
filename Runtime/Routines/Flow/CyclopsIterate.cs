@@ -21,7 +21,7 @@ namespace Smonch.CyclopsFramework
 {
 	public class CyclopsIterate<T> : CyclopsRoutine
     {
-        public static readonly string Tag = TagPrefix_Cyclops + "CyclopsIterate";
+        public const string Tag = TagPrefix_Cyclops + "CyclopsIterate";
 		
 		IEnumerable<T> _collection;
 		int _maxSuccessesPerFrame;

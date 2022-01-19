@@ -179,14 +179,14 @@ namespace Smonch.CyclopsFramework
             return true;
         }
  
-		public CyclopsRoutine Add(Action f)
+		public CyclopsLambda Add(Action f)
         {
             return Add(new CyclopsLambda(f));
         }
 
-        public CyclopsRoutine Add(string tag, Action f)
+        public CyclopsLambda Add(string tag, Action f)
         {
-            return Add(new CyclopsLambda(f))
+            return (CyclopsLambda)Add(new CyclopsLambda(f))
                 .AddTag(tag);
         }
 
@@ -239,19 +239,19 @@ namespace Smonch.CyclopsFramework
             return AddSequence(routines, false);
         }
 
-        public CyclopsRoutine Loop(Action f)
+        public CyclopsLambda Loop(Action f)
         {
-            return Add(new CyclopsLambda(period: 0f, cycles: float.MaxValue, f))
+            return (CyclopsLambda)Add(new CyclopsLambda(period: 0f, cycles: float.MaxValue, f))
                 .AddTag(Tag_Loop);
         }
 
-        public CyclopsRoutine Loop(float period, float cycles, Action f)
+        public CyclopsLambda Loop(float period, float cycles, Action f)
         {
-            return Add(new CyclopsLambda(period, cycles, f))
+            return (CyclopsLambda)Add(new CyclopsLambda(period, cycles, f))
                 .AddTag(Tag_Loop);
         }
 
-        public CyclopsRoutine LoopWhile(Func<bool> predicate, float period = 0f)
+        public CyclopsLambda LoopWhile(Func<bool> predicate, float period = 0f)
         {
             var routine = Add(new CyclopsLambda(period, float.MaxValue, () =>
             {
@@ -259,10 +259,10 @@ namespace Smonch.CyclopsFramework
                     Context.Stop();
             })).AddTag(Tag_LoopWhile);
 
-            return routine;
+            return (CyclopsLambda)routine;
         }
 
-        public CyclopsRoutine LoopWhile(Func<bool> whilePredicate, Action whileBody, float period = 0f)
+        public CyclopsLambda LoopWhile(Func<bool> whilePredicate, Action whileBody, float period = 0f)
         {
             var routine = Add(new CyclopsLambda(period, float.MaxValue, () =>
             {
@@ -279,7 +279,7 @@ namespace Smonch.CyclopsFramework
                 }
             })).AddTag(Tag_LoopWhile);
 
-            return routine;
+            return (CyclopsLambda)routine;
         }
 
         public CyclopsRoutine Nop(string tag = null, int cycles=1)
@@ -300,12 +300,12 @@ namespace Smonch.CyclopsFramework
             return Context;
         }
         
-        public CyclopsRoutine Sleep(float period, string tag=null)
+        public CyclopsSleep Sleep(float period, string tag=null)
         {
             if (tag == null)
                 return Add(new CyclopsSleep(period));
             else
-                return Add(new CyclopsSleep(period)).AddTag(tag);
+                return (CyclopsSleep)Add(new CyclopsSleep(period)).AddTag(tag);
         }
 
         public CyclopsWaitForMessage Listen(string receiverTag, string messageName)
@@ -318,32 +318,32 @@ namespace Smonch.CyclopsFramework
             return Add(new CyclopsWaitForMessage(receiverTag, messageName, timeout, cycles));
         }
         
-        public CyclopsRoutine WaitForTask(Action<CyclopsTask> f)
+        public CyclopsTask WaitForTask(Action<CyclopsTask> f)
         {
             return Add(new CyclopsTask(f));
         }
 
-        public CyclopsRoutine WaitUntil(Func<bool> condition)
+        public CyclopsWaitUntil WaitUntil(Func<bool> condition)
         {
             return Add(new CyclopsWaitUntil(condition));
         }
 
-        public CyclopsRoutine WaitUntil(Func<bool> condition, float timeout)
+        public CyclopsWaitUntil WaitUntil(Func<bool> condition, float timeout)
         {
             return Add(new CyclopsWaitUntil(condition, timeout));
         }
 
-        public CyclopsRoutine When(Func<bool> condition, Action response = null, float timeout = float.MaxValue)
+        public CyclopsWhen When(Func<bool> condition, Action response = null, float timeout = float.MaxValue)
         {
             return Add(new CyclopsWhen(condition, response, timeout));
         }
         
-        public CyclopsRoutine Lerp(float period, float cycles, Action<float> f)
+        public CyclopsUpdate Lerp(float period, float cycles, Action<float> f)
         {
             return Add(new CyclopsUpdate(period, cycles, null, f));
         }
 
-        public CyclopsRoutine Lerp(float period, Action<float> f)
+        public CyclopsUpdate Lerp(float period, Action<float> f)
         {
             return Add(new CyclopsUpdate(period, 1, null, f));
         }

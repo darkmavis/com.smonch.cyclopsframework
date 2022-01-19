@@ -20,7 +20,7 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsWhen : CyclopsRoutine
     {
-        public static readonly string Tag = TagPrefix_Cyclops + "CyclopsWhen";
+        public const string Tag = TagPrefix_Cyclops + "CyclopsWhen";
 
         Func<bool> _f;
 		Action _g;
