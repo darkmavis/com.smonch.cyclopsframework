@@ -20,7 +20,7 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsLambda : CyclopsRoutine
     {
-        public static readonly string Tag = TagPrefix_Cyclops + "CyclopsLambda";
+        public const string Tag = TagPrefix_Cyclops + "CyclopsLambda";
 		
 		private object _data;
 

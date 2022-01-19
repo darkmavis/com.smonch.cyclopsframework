@@ -142,6 +142,75 @@ namespace Smonch.CyclopsFramework
 
         [Test]
         [Category("Smoke")]
+        [Category("Pausing")]
+        public void Pause_WithValidTag_DecrementsToOne(
+            [Values(ValidTag)] string tag,
+            [Values(1,2,3,4,5)] int cycles,
+            [Values(MaxDeltaTime)] float deltaTime)
+        {
+            int x = 2;
+
+            Host.Loop(period: 0, cycles: 2, () => --x)
+                .AddTag(tag);
+
+            // Get this thing added at the end of this frame and ready for update on the next frame.
+            Host.Update(deltaTime);
+            
+            Assert.AreEqual(2, x);
+            
+            Host.Pause(tag);
+
+            for (int i = 0; i < cycles; ++i)
+            {
+                // Should only update the CyclopsLambda once.
+                Host.Update(deltaTime);
+                Assert.AreEqual(1, x);
+            }
+        }
+
+        [Test]
+        [Category("Smoke")]
+        [Category("Pausing")]
+        public void PauseAndResume_WithValidTag_DecrementsToZero(
+            [Values(ValidTag)] string tag,
+            [Values(1, 2, 3, 4, 5)] int cycles,
+            [Values(MaxDeltaTime)] float deltaTime)
+        {
+            int x = 2;
+            int y = cycles;
+
+            Host.Loop(period: 0, cycles: 2, () => --x)
+                .AddTag(tag);
+            Host.Loop(period: 0, cycles: cycles, () => --y);
+
+            // Get these routines added at the end of this frame and ready for update on the next frame.
+            Host.Update(deltaTime);
+            
+            Assert.AreEqual(2, x);
+
+            Host.Pause(tag);
+
+            for (int i = 0; i < cycles; ++i)
+            {
+                // Should only update the CyclopsLambda once.
+                Host.Update(deltaTime);
+                Assert.AreEqual(1, x);
+            }
+
+            Host.Resume(tag);
+
+            // Resumes after all updates are processed.
+            Host.Update(deltaTime);
+
+            // Actually updates on the next frame.
+            Host.Update(deltaTime);
+
+            Assert.Zero(x);
+            Assert.Zero(y);
+        }
+
+        [Test]
+        [Category("Smoke")]
         [Category("Updates")]
         public void UpdateLambda_WithValidDeltaTime_DecrementsToZero(
             [ValueSource(nameof(ValidDeltaTimes))] float deltaTime)

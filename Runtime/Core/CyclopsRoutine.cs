@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using UnityEngine.Assertions;
 
 namespace Smonch.CyclopsFramework
@@ -23,14 +24,15 @@ namespace Smonch.CyclopsFramework
     public class CyclopsRoutine : CyclopsCommon, ICyclopsDisposable, ICyclopsPausable, ICyclopsTaggable
     {
         // These collections provide a way to ease up on allocations.
-        private static Queue<List<string>> _tagCollectionPool;
-        private static Queue<List<CyclopsRoutine>> _childRoutineCollectionPool;
+        private static ConcurrentBag<List<string>> _tagCollectionPool;
+        private static ConcurrentBag<List<CyclopsRoutine>> _childRoutineCollectionPool;
 
         // Use a linear bias by default: t => t;
         // Please note that all built-in Bias methods make an attempt to benefit from: MethodImplOptions.AggressiveInlining
         private Func<float, float> _bias = null;
 
         private bool _canSyncAtStart;
+        private bool _readyToCallFirstFrameAgain;
         private bool _shouldStoppageCallLastFrame;
         private Func<CyclopsRoutine, bool> _stoppagePredicate;
         private bool _tagsAreDirty;
@@ -91,14 +93,8 @@ namespace Smonch.CyclopsFramework
         // These collections provide a way to ease up on allocations.
         static CyclopsRoutine()
         {
-            _childRoutineCollectionPool = new Queue<List<CyclopsRoutine>>(capacity: 256);
-            _tagCollectionPool = new Queue<List<string>>(capacity: 256);
-
-            for (int i = 0; i < 256; ++i)
-            {
-                _childRoutineCollectionPool.Enqueue(new List<CyclopsRoutine>(capacity: 4));
-                _tagCollectionPool.Enqueue(new List<string>(capacity: 12));
-            }
+            _childRoutineCollectionPool = new ConcurrentBag<List<CyclopsRoutine>>();
+            _tagCollectionPool = new ConcurrentBag<List<string>>();
         }
 
         /// <summary>
@@ -122,46 +118,43 @@ namespace Smonch.CyclopsFramework
 
             _bias = bias ?? Bias.Linear;
 
-            EnsureCollectionCapacity();
+            InitializeCollections();
 
             AddTag(tag ?? Tag_Undefined);
         }
 
-        private void EnsureCollectionCapacity()
+        private void InitializeCollections()
         {
-            if (_childRoutineCollectionPool.Count > 0)
-            {
-                Children = _childRoutineCollectionPool.Dequeue();
-                Children.Clear();
-            }
+            if (_childRoutineCollectionPool.TryTake(out var children))
+                children.Clear();
             else
-            {
-                Children = new List<CyclopsRoutine>(capacity: 4);
-            }
+                children = new List<CyclopsRoutine>();
 
-            if (Tags == null)
-            {
-                if (_tagCollectionPool.Count > 0)
-                {
-                    Tags = _tagCollectionPool.Dequeue();
-                    Tags.Clear();
-                }
-                else
-                {
-                    Tags = new List<string>(capacity: 16);
-                }
-            }
+            Children = children;
+
+            if (_tagCollectionPool.TryTake(out var tags))
+                tags.Clear();
+            else
+                tags = new List<string>();
+
+            Tags = tags;
         }
 
         void ICyclopsDisposable.Dispose()
         {
             Children.Clear();
-            _childRoutineCollectionPool.Enqueue(Children);
-            Children = null; // Prevent any possibility of accidentally accessing this in the future.
+            _childRoutineCollectionPool.Add(Children);
+
+            // Prevent any possibility of accidentally accessing this in the future.
+            // This has nothing to do with thread safety.
+            Children = null;
 
             Tags.Clear();
-            _tagCollectionPool.Enqueue(Tags);
-            Tags = null; // Prevent any possibility of accidentally accessing this in the future.
+            _tagCollectionPool.Add(Tags);
+
+            // Prevent any possibility of accidentally accessing this in the future.
+            // This has nothing to do with thread safety.
+            Tags = null;
         }
 
         public override T Add<T>(T routine)
@@ -299,6 +292,9 @@ namespace Smonch.CyclopsFramework
                 return;
             }
 
+            if (_readyToCallFirstFrameAgain)
+                OnFirstFrame();
+
             // If period is 0 then age is naturally incremented.
             // Negative periods aren't valid.
             // Also, please consider floating point drift.
@@ -344,7 +340,7 @@ namespace Smonch.CyclopsFramework
                         return;
                     }
 
-                    OnFirstFrame();
+                    _readyToCallFirstFrameAgain = true;
                 }
                 else
                 {
