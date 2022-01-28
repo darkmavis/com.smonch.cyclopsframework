@@ -46,7 +46,7 @@ namespace Smonch.CyclopsFramework
             Vector3? worldPosition = null,
             double cycles = 1.0,
             bool shouldRestoreAudioSourceSettings = true)
-            : base(clip.length / pitch, cycles, null, Tag)
+            : base(clip.length / pitch, cycles, Tag)
         {
             _source = source;
             _currSettings.clip = clip;
@@ -55,6 +55,40 @@ namespace Smonch.CyclopsFramework
             _currSettings.panStereo = panStereo;
             _currSettings.worldPosition = worldPosition ?? source.transform.position;
             _shouldRestoreAudioSourceSettings = shouldRestoreAudioSourceSettings;
+        }
+
+        public static AudioRoutine Instantiate(
+            AudioSource source,
+            AudioClip clip = null,
+            float pitch = 1f,
+            float volume = 1f,
+            float panStereo = 0f,
+            Vector3? worldPosition = null,
+            double cycles = 1.0,
+            bool shouldRestoreAudioSourceSettings = true)
+        {
+            if (TryInstantiateFromPool(() => new AudioRoutine(source, clip, pitch, volume, panStereo, worldPosition, cycles, shouldRestoreAudioSourceSettings), out var result))
+            {
+                result.Period = clip.length / pitch;
+                result.MaxCycles = cycles;
+
+                result._source = source;
+                result._currSettings.clip = clip;
+                result._currSettings.pitch = pitch;
+                result._currSettings.volume = volume;
+                result._currSettings.panStereo = panStereo;
+                result._currSettings.worldPosition = worldPosition ?? source.transform.position;
+                result._shouldRestoreAudioSourceSettings = shouldRestoreAudioSourceSettings;
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _source = null;
+            _prevSettings.clip = null;
+            _currSettings.clip = null;
         }
 
         public override bool IsPaused

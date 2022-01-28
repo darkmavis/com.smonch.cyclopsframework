@@ -14,42 +14,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System;
-using System.Collections;
+using UnityEngine;
 
 namespace Smonch.CyclopsFramework
 {
-    public sealed class CyclopsCoroutine : CyclopsRoutine
+    public struct TweenQs
     {
-        public const string Tag = TagPrefix_Cyclops + "CyclopsCoroutine";
+        public Quaternion? from;
+        public Quaternion? to;
+        public Quaternion a;
+        public Quaternion b;
 
-        private Func<IEnumerator> _f;
-
-        private CyclopsCoroutine(Func<IEnumerator> f)
-            : base(double.MaxValue, 1, Tag)
+        public Quaternion Fallback
         {
-            _f = f;
-        }
-        
-        public static CyclopsCoroutine Instantiate(Func<IEnumerator> f)
-        {
-            if (TryInstantiateFromPool(() => new CyclopsCoroutine(f), out var result))
+            set
             {
-                result._f = f;
+                a = from ?? value;
+                b = to ?? value;
             }
-
-            return result;
         }
 
-        protected override void OnRecycle()
+        public void SetFromTo(Quaternion? fromValue, Quaternion? toValue)
         {
-            _f = null;
+            from = fromValue;
+            to = toValue;
         }
 
-        protected override void OnUpdate(float t)
+        public void Reset()
         {
-            if (!_f().MoveNext())
-                Stop();
+            from = null;
+            to = null;
+            a = Quaternion.identity;
+            b = Quaternion.identity;
+        }
+
+        public Quaternion Evaluate(float t)
+        {
+            return Quaternion.Slerp(a, b, t);
         }
     }
 }

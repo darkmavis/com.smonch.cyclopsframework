@@ -24,28 +24,56 @@ namespace Smonch.CyclopsFramework
         public const string Tag = TagPrefix_Cyclops + "TweenTransformScale";
 
         private Transform _transform;
-        private Vector3? _fromScale;
-        private Vector3? _toScale;
-        private Vector3 _a;
-        private Vector3 _b;
+        private Tween3f _tween;
 
-        public TweenTransformScale(Transform transform, Vector3? fromScale = null, Vector3? toScale = null, float period = 0f, float cycles = 1f, Func<float, float> bias = null)
+        public TweenTransformScale(
+            Transform transform,
+            Vector3? fromScale = null,
+            Vector3? toScale = null,
+            float period = 0f,
+            float cycles = 1f,
+            Func<float, float> bias = null)
             : base(period, cycles, bias, Tag)
         {
             _transform = transform;
-            _fromScale = fromScale;
-            _toScale = toScale;
+            _tween.SetFromTo(fromScale, toScale);
+        }
+
+        public static TweenTransformScale Instantiate(
+            Transform transform,
+            Vector3? fromScale = null,
+            Vector3? toScale = null,
+            float period = 0f,
+            float cycles = 1f,
+            Func<float, float> bias = null)
+        {
+            if (TryInstantiateFromPool(() => new TweenTransformScale(transform, fromScale, toScale, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._transform = transform;
+                result._tween.SetFromTo(fromScale, toScale);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _transform = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromScale ?? _transform.localScale;
-            _b = _toScale ?? _transform.localScale;
+            _tween.Fallback = _transform.localScale;
         }
 
         protected override void OnUpdate(float t)
         {
-            _transform.localScale = Vector3.Lerp(_a, _b, t);
+            _transform.localScale = _tween.Evaluate(t);
         }
     }
 }

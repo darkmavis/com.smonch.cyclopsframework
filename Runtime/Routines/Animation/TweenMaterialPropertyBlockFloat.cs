@@ -25,12 +25,9 @@ namespace Smonch.CyclopsFramework
 
         private MaterialPropertyBlock _block;
         private int _propertyId;
-        private float? _fromValue;
-        private float? _toValue;
-        private float _a;
-        private float _b;
+        private Tween1f _tween;
 
-        public TweenMaterialPropertyBlockFloat(
+        private TweenMaterialPropertyBlockFloat(
             MaterialPropertyBlock block,
             int propertyId,
             float? fromValue = null,
@@ -42,35 +39,46 @@ namespace Smonch.CyclopsFramework
         {
             _block = block;
             _propertyId = propertyId;
-            _fromValue = fromValue;
-            _toValue = toValue;
+            _tween.SetFromTo(fromValue, toValue);
         }
 
-        public TweenMaterialPropertyBlockFloat(
+        public static TweenMaterialPropertyBlockFloat Instantiate(
             MaterialPropertyBlock block,
-            string propertyName,
+            int propertyId,
             float? fromValue = null,
             float? toValue = null,
             float period = 0f,
             float cycles = 1f,
             Func<float, float> bias = null)
-            : base(period, cycles, bias, Tag)
         {
-            _block = block;
-            _propertyId = Shader.PropertyToID(propertyName);
-            _fromValue = fromValue;
-            _toValue = toValue;
+            if (TryInstantiateFromPool(() => new TweenMaterialPropertyBlockFloat(block, propertyId, fromValue, toValue, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._block = block;
+                result._propertyId = propertyId;
+                result._tween.SetFromTo(fromValue, toValue);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _block = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromValue ?? _block.GetFloat(_propertyId);
-            _b = _toValue ?? _block.GetFloat(_propertyId);
+            _tween.Fallback = _block.GetFloat(_propertyId);
         }
 
         protected override void OnUpdate(float t)
         {
-            _block.SetFloat(_propertyId, Mathf.Lerp(_a, _b, t));
+            _block.SetFloat(_propertyId, _tween.Evaluate(t));
         }
     }
 }

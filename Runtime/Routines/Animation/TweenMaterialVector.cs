@@ -25,12 +25,9 @@ namespace Smonch.CyclopsFramework
 
         private Material _material;
         private int _propertyId;
-        private Vector4? _fromVector;
-        private Vector4? _toVector;
-        private Vector4 _a;
-        private Vector4 _b;
+        private Tween4f _tween;
 
-        public TweenMaterialVector(
+        private TweenMaterialVector(
             Material material,
             int propertyId,
             Vector4? fromVector = null,
@@ -42,35 +39,46 @@ namespace Smonch.CyclopsFramework
         {
             _material = material;
             _propertyId = propertyId;
-            _fromVector = fromVector;
-            _toVector = toVector;
+            _tween.SetFromTo(fromVector, toVector);
         }
 
-        public TweenMaterialVector(
+        public static TweenMaterialVector Instantiate(
             Material material,
-            string propertyName,
+            int propertyId,
             Vector4? fromVector = null,
             Vector4? toVector = null,
             float period = 0f,
             float cycles = 1f,
             Func<float, float> bias = null)
-            : base(period, cycles, bias, Tag)
         {
-            _material = material;
-            _propertyId = Shader.PropertyToID(propertyName);
-            _fromVector = fromVector;
-            _toVector = toVector;
+            if (TryInstantiateFromPool(() => new TweenMaterialVector(material, propertyId, fromVector, toVector, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._material = material;
+                result._propertyId = propertyId;
+                result._tween.SetFromTo(fromVector, toVector);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _material = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromVector ?? _material.GetVector(_propertyId);
-            _b = _toVector ?? _material.GetVector(_propertyId);
+            _tween.Fallback = _material.GetVector(_propertyId);
         }
 
         protected override void OnUpdate(float t)
         {
-            _material.SetVector(_propertyId, Vector4.Lerp(_a, _b, t));
+            _material.SetVector(_propertyId, _tween.Evaluate(t));
         }
     }
 }

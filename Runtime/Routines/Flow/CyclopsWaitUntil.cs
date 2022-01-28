@@ -22,20 +22,47 @@ namespace Smonch.CyclopsFramework
     {
         public const string Tag = TagPrefix_Cyclops + "CyclopsWaitUntil";
 		
-        Func<bool> _f;
+        private Func<bool> _f;
+        private bool _wasSuccessful;
 
-        bool _wasSuccessful = false;
-
-        public CyclopsWaitUntil(Func<bool> f)
+        private CyclopsWaitUntil(Func<bool> f)
             : base(double.MaxValue, 1, null, Tag)
         {
             _f = f;
         }
 
-        public CyclopsWaitUntil(Func<bool> f, double timeout)
+        private CyclopsWaitUntil(Func<bool> f, double timeout)
             : base(timeout, 1, null, Tag)
         {
             _f = f;
+        }
+
+        public static CyclopsWaitUntil Instantiate(Func<bool> f)
+        {
+            if (TryInstantiateFromPool(() => new CyclopsWaitUntil(f), out var result))
+            {
+                result._f = f;
+            }
+
+            return result;
+        }
+
+        public static CyclopsWaitUntil Instantiate(Func<bool> f, double timeout)
+        {
+            if (TryInstantiateFromPool(() => new CyclopsWaitUntil(f), out var result))
+            {
+                result.Period = timeout;
+
+                result._f = f;
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _f = null;
+            _wasSuccessful = false;
         }
 
         protected override void OnUpdate(float t)

@@ -22,43 +22,45 @@ namespace Smonch.CyclopsFramework
     {
         public const string Tag = TagPrefix_Cyclops + "CyclopsLambda";
 		
-		private object _data;
+		private Action _f;
 
-		Action _f;
-		Action<object> _fd;
-		
-        public CyclopsLambda(Action f)
-			: base(0, 1, null, Tag)
+        private CyclopsLambda(double period, double cycles, Action f)
+            : base(period, cycles, Tag)
         {
-			_f = f;
+            _f = f;
         }
 
-        public CyclopsLambda(object data, Action<object> f)
-			: base(0, 1, null, Tag)
+        public static CyclopsLambda Instantiate(Action f)
         {
-			_data = data;
-			_fd = f;
-        }
-		
-		public CyclopsLambda(double period, double cycles, Action f)
-			: base(period, cycles, null, Tag)
-        {
-			_f = f;
-        }
-		
-		public CyclopsLambda(double period, double cycles, object data, Action<object> f)
-			: base(period, cycles, null, Tag)
-        {
-			_data = data;
-			_fd = f;
+            if (TryInstantiateFromPool(() => new CyclopsLambda(0, 1, f), out var result))
+            {
+                result._f = f;
+            }
+
+            return result;
         }
 
-		protected override void OnFirstFrame()
-		{
-			if (_data != null)
-				_fd(_data);
-			else
-				_f();
-		}
+        public static CyclopsLambda Instantiate(double period, double cycles, Action f)
+        {
+            if (TryInstantiateFromPool(() => new CyclopsLambda(period, cycles, f), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+
+                result._f = f;
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _f = null;
+        }
+
+        protected override void OnUpdate(float t)
+        {
+            _f();
+        }
     }
 }

@@ -14,28 +14,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using UnityEngine;
+
 namespace Smonch.CyclopsFramework
 {
-    public class CyclopsNop : CyclopsRoutine
+    public struct Tween4f
     {
-        public const string Tag = Tag_Nop;
+        public Vector4? from;
+        public Vector4? to;
+        public Vector4 a;
+        public Vector4 b;
 
-        private CyclopsNop(double cycles)
-            : base(period: 0, cycles: 1, bias: null, tag: Tag)
+        public Vector4 Fallback
         {
-            // Pass
+            set
+            {
+                a = from ?? value;
+                b = to ?? value;
+            }
         }
 
-        public static CyclopsNop Instantiate(double cycles)
+        public void SetFromTo(Vector4? fromValue, Vector4? toValue)
         {
-            if (TryInstantiateFromPool(() => new CyclopsNop(cycles), out var result))
-            {
-                result.MaxCycles = cycles;
-            }
+            from = fromValue;
+            to = toValue;
+        }
 
-            result.MustRecycleIfPooled = false;
+        public void Reset()
+        {
+            from = null;
+            to = null;
+            a = Vector4.zero;
+            b = Vector4.zero;
+        }
 
-            return result;
+        public Vector4 Evaluate(float t)
+        {
+            return Vector4.Lerp(a, b, t);
         }
     }
 }

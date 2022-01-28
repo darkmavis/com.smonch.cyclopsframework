@@ -36,7 +36,7 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         public bool IsCancellationRequested { get; private set; }
 
-        public CyclopsTask(Task task, CancellationTokenSource tokenSource)
+        private CyclopsTask(Task task, CancellationTokenSource tokenSource)
             : base(1f, 0f, null, Tag)
         {
             Assert.IsNotNull(task);
@@ -45,20 +45,61 @@ namespace Smonch.CyclopsFramework
             _tokenSource = tokenSource;
         }
 
-        public CyclopsTask(Action<CyclopsTask> f)
+        private CyclopsTask(Action<CyclopsTask> f)
             : base(1f, 0f, null, Tag)
         {
             Assert.IsNotNull(f);
 
             _f = f;
         }
-        
-        public CyclopsTask(double period, double cycles, Action<CyclopsTask> f)
+
+        private CyclopsTask(double period, double cycles, Action<CyclopsTask> f)
             : base(period, cycles, null, Tag)
         {
             Assert.IsNotNull(f);
 
             _f = f;
+        }
+
+        public static CyclopsTask Instantiate(Task task, CancellationTokenSource tokenSource)
+        {
+            if (TryInstantiateFromPool(() => new CyclopsTask(task, tokenSource), out var result))
+            {
+                result._task = task;
+                result._tokenSource = tokenSource;
+            }
+
+            return result;
+        }
+
+        public static CyclopsTask Instantiate(Action<CyclopsTask> f)
+        {
+            if (TryInstantiateFromPool(() => new CyclopsTask(f), out var result))
+                result._f = f;
+
+            return result;
+        }
+
+        public static CyclopsTask Instantiate(double period, double cycles, Action<CyclopsTask> f)
+        {
+            if (TryInstantiateFromPool(() => new CyclopsTask(period, cycles, f), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+
+                result._f = f;
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _task = null;
+            _tokenSource = null;
+            _f = null;
+
+            IsCancellationRequested = false;
         }
 
         protected override void OnEnter()
@@ -67,7 +108,7 @@ namespace Smonch.CyclopsFramework
             {
                 _task = Task.Run(() => _f(this));
             }
-            else if (_task.Status == TaskStatus.Created)
+            else
             {
                 _task.Start();
             }

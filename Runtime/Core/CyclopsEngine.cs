@@ -315,7 +315,6 @@ namespace Smonch.CyclopsFramework
         
         public bool TimerReady(float period, string tag, bool canRestart = false)
         {
-
             Assert.IsTrue(ValidateTimingValue(period, out var reason), reason);
             Assert.IsTrue(ValidateTag(tag, out reason), reason);
 
@@ -619,7 +618,6 @@ namespace Smonch.CyclopsFramework
             Assert.IsFalse(_nextAdditionIsImmediate, "CyclopsEngine should not currently be in immediate additions mode.  Add() should follow the use of Immediately.");
             _nextAdditionIsImmediate = false;
 
-            // Further timing checks after this one only apply to release builds.
             Assert.IsTrue(ValidateTimingValue(deltaTime, out var reason), reason);
             
             DeltaTime = Mathf.Clamp(deltaTime, float.Epsilon, MaxDeltaTime);

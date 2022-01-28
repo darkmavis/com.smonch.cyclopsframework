@@ -19,18 +19,15 @@ using UnityEngine;
 
 namespace Smonch.CyclopsFramework
 {
-    public class TweenMaterialProperty : CyclopsRoutine
+    public class TweenMaterialFloat : CyclopsRoutine
     {
         public const string Tag = TagPrefix_Cyclops + "TweenMaterialProperty";
 
         private Material _material;
         private int _propertyId;
-        private float? _fromValue;
-        private float? _toValue;
-        private float _a;
-        private float _b;
+        private Tween1f _tween;
         
-        public TweenMaterialProperty(
+        private TweenMaterialFloat(
             Material material,
             int propertyId,
             float? fromValue = null,
@@ -42,35 +39,46 @@ namespace Smonch.CyclopsFramework
         {
             _material = material;
             _propertyId = propertyId;
-            _fromValue = fromValue;
-            _toValue = toValue;
+            _tween.SetFromTo(fromValue, toValue);
         }
 
-        public TweenMaterialProperty(
+        public static TweenMaterialFloat Instantiate(
             Material material,
-            string propertyName,
+            int propertyId,
             float? fromValue = null,
             float? toValue = null,
             float period = 0f,
             float cycles = 1f,
             Func<float, float> bias = null)
-            : base(period, cycles, bias, Tag)
         {
-            _material = material;
-            _propertyId = Shader.PropertyToID(propertyName);
-            _fromValue = fromValue;
-            _toValue = toValue;
+            if (TryInstantiateFromPool(() => new TweenMaterialFloat(material, propertyId, fromValue, toValue, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._material = material;
+                result._propertyId = propertyId;
+                result._tween.SetFromTo(fromValue, toValue);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _material = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromValue ?? _material.GetFloat(_propertyId);
-            _b = _toValue ?? _material.GetFloat(_propertyId);
+            _tween.Fallback = _material.GetFloat(_propertyId);
         }
 
         protected override void OnUpdate(float t)
         {
-            _material.SetFloat(_propertyId, Mathf.Lerp(_a, _b, t));
+            _material.SetFloat(_propertyId, _tween.Evaluate(t));
         }
     }
 }

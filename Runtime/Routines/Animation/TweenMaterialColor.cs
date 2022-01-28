@@ -25,12 +25,9 @@ namespace Smonch.CyclopsFramework
 
         private Material _material;
         private int _propertyId;
-        private Color? _fromColor;
-        private Color? _toColor;
-        private Color _a;
-        private Color _b;
+        private Tween4c _tween;
 
-        public TweenMaterialColor(
+        private TweenMaterialColor(
             Material material,
             int propertyId,
             Color? fromColor = null,
@@ -42,35 +39,46 @@ namespace Smonch.CyclopsFramework
         {
             _material = material;
             _propertyId = propertyId;
-            _fromColor = fromColor;
-            _toColor = toColor;
+            _tween.SetFromTo(fromColor, toColor);
         }
 
-        public TweenMaterialColor(
+        public static TweenMaterialColor Instantiate(
             Material material,
-            string propertyName,
+            int propertyId,
             Color? fromColor = null,
             Color? toColor = null,
             float period = 0f,
             float cycles = 1f,
             Func<float, float> bias = null)
-            : base(period, cycles, bias, Tag)
         {
-            _material = material;
-            _propertyId = Shader.PropertyToID(propertyName);
-            _fromColor = fromColor;
-            _toColor = toColor;
+            if (TryInstantiateFromPool(() => new TweenMaterialColor(material, propertyId, fromColor, toColor, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._material = material;
+                result._propertyId = propertyId;
+                result._tween.SetFromTo(fromColor, toColor);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _material = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromColor ?? _material.GetColor(_propertyId);
-            _b = _toColor ?? _material.GetColor(_propertyId);
+            _tween.Fallback = _material.GetColor(_propertyId);
         }
 
         protected override void OnUpdate(float t)
         {
-            _material.color = Color.Lerp(_a, _b, t);
+            _material.color = _tween.Evaluate(t);
         }
     }
 }
