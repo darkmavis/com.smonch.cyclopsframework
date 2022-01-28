@@ -20,10 +20,22 @@ namespace Smonch.CyclopsFramework
     {
         public const string Tag = TagPrefix_Cyclops + "CyclopsSleep";
 		
-        public CyclopsSleep(double period)
+        private CyclopsSleep(double period)
             : base(period, 1, null, Tag)
         {
             // pass
+        }
+
+        public static CyclopsSleep Instantiate(double period)
+        {
+            if (TryInstantiateFromPool(() => new CyclopsSleep(period), out var result))
+            {
+                result.Period = period;
+            }
+
+            result.MustRecycleIfPooled = false;
+
+            return result;
         }
     }
 }

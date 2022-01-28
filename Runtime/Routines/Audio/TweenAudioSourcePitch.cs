@@ -22,29 +22,57 @@ namespace Smonch.CyclopsFramework
     {
         public const string Tag = TagPrefix_Cyclops + "TweenAudioSourcePitch";
 
-        AudioSource _source;
-        float? _fromPitch;
-        float? _toPitch;
-        float _a;
-        float _b;
+        private AudioSource _source;
+        private Tween1f _tween;
 
-        public TweenAudioSourcePitch(AudioSource source, float? fromPitch, float? toPitch, float period = 0f, float cycles = 1f, System.Func<float, float> bias = null)
+        public TweenAudioSourcePitch(
+            AudioSource source,
+            float? fromPitch,
+            float? toPitch,
+            float period = 0f,
+            float cycles = 1f,
+            System.Func<float, float> bias = null)
             : base(period, cycles, bias, Tag)
         {
             _source = source;
-            _fromPitch = fromPitch;
-            _toPitch = toPitch;
+            _tween.SetFromTo(fromPitch, toPitch);
+        }
+
+        public static TweenAudioSourcePitch Instantiate(
+            AudioSource source,
+            float? fromPitch,
+            float? toPitch,
+            float period = 0f,
+            float cycles = 1f,
+            System.Func<float, float> bias = null)
+        {
+            if (TryInstantiateFromPool(() => new TweenAudioSourcePitch(source, fromPitch, toPitch, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._source = source;
+                result._tween.SetFromTo(fromPitch, toPitch);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _source = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromPitch ?? _source.pitch;
-            _b = _toPitch ?? _source.pitch;
+            _tween.Fallback = _source.pitch;
         }
 
         protected override void OnUpdate(float t)
         {
-            _source.pitch = Mathf.Lerp(_a, _b, t);
+            _source.pitch = _tween.Evaluate(t);
         }
     }
 }

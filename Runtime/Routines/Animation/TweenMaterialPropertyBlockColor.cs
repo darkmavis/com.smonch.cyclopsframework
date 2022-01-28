@@ -25,12 +25,9 @@ namespace Smonch.CyclopsFramework
 
         private MaterialPropertyBlock _block;
         private int _propertyId;
-        private Color? _fromColor;
-        private Color? _toColor;
-        private Color _a;
-        private Color _b;
+        private Tween4c _tween;
 
-        public TweenMaterialPropertyBlockColor(
+        private TweenMaterialPropertyBlockColor(
             MaterialPropertyBlock block,
             int propertyId,
             Color? fromColor = null,
@@ -42,35 +39,46 @@ namespace Smonch.CyclopsFramework
         {
             _block = block;
             _propertyId = propertyId;
-            _fromColor = fromColor;
-            _toColor = toColor;
+            _tween.SetFromTo(fromColor, toColor);
         }
 
-        public TweenMaterialPropertyBlockColor(
+        public static TweenMaterialPropertyBlockColor Instantiate(
             MaterialPropertyBlock block,
-            string propertyName,
+            int propertyId,
             Color? fromColor = null,
             Color? toColor = null,
             float period = 0f,
             float cycles = 1f,
             Func<float, float> bias = null)
-            : base(period, cycles, bias, Tag)
         {
-            _block = block;
-            _propertyId = Shader.PropertyToID(propertyName);
-            _fromColor = fromColor;
-            _toColor = toColor;
+            if (TryInstantiateFromPool(() => new TweenMaterialPropertyBlockColor(block, propertyId, fromColor, toColor, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._block = block;
+                result._propertyId = propertyId;
+                result._tween.SetFromTo(fromColor, toColor);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _block = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromColor ?? _block.GetColor(_propertyId);
-            _b = _toColor ?? _block.GetColor(_propertyId);
+            _tween.Fallback = _block.GetColor(_propertyId);
         }
 
         protected override void OnUpdate(float t)
         {
-            _block.SetColor(_propertyId, Color.Lerp(_a, _b, t));
+            _block.SetColor(_propertyId, _tween.Evaluate(t));
         }
     }
 }

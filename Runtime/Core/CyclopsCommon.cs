@@ -46,158 +46,26 @@ namespace Smonch.CyclopsFramework
         public abstract T Add<T>(T routine) where T : CyclopsRoutine;
 
         public static Action<string> Logger;
-
-        /// <summary>
-        /// Validates that a Cyclops Framework tag is actually useful.
-        /// A tag can't be null and must contain at least one non-whitespace character.
-        /// </summary>
-        /// <param name="tag"></param>
-        /// <param name="reason"></param>
-        /// <returns>Returns false if validation fails, otherwise returns true.</returns>
-        protected bool ValidateTag(string tag, out string reason)
-        {
-            reason = null;
-
-            if (string.IsNullOrWhiteSpace(tag))
-            {
-                if (tag == null)
-                    reason = "Tag is null.";
-                else
-                    reason = "A tag must contain a least one non-whitespace character.";
-                return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Validates that a timing value which could be used for a timer or routine is actually useful.
-        /// </summary>
-        /// <param name="timingValue"></param>
-        /// <param name="reason"></param>
-        /// <returns>Returns false if validation fails, otherwise returns true.</returns>
-        protected bool ValidateTimingValue(double timingValue, out string reason)
-        {
-            bool result;
-
-            if (double.IsInfinity(timingValue))
-            {
-                reason = "Timing value must be a finite.";
-                result = false;
-            }
-            else if (double.IsNaN(timingValue))
-            {
-                reason = "Timing value must be a number.";
-                result = false;
-            }
-            else if (timingValue < 0d)
-            {
-                reason = "Timing value must be positive.";
-                result = false;
-            }
-            else if (timingValue == 0d)
-            {
-                reason = "Timing value must be greater than zero.";
-                result = false;
-            }
-            else
-            {
-                reason = null;
-                result = true;
-            }
-            
-            return result;
-        }
-
-        /// <summary>
-        /// Validates that a timing value which could be used for a timer or routine is actually useful.
-        /// Zero is Ok.
-        /// </summary>
-        /// <param name="timingValue"></param>
-        /// <param name="reason"></param>
-        /// <returns>Returns false if validation fails, otherwise returns true.</returns>
-        protected bool ValidateTimingValueWhereZeroIsOk(double timingValue, out string reason)
-        {
-            bool result;
-
-            if (double.IsInfinity(timingValue))
-            {
-                reason = "Timing value must be a finite.";
-                result = false;
-            }
-            else if (double.IsNaN(timingValue))
-            {
-                reason = "Timing value must be a number.";
-                result = false;
-            }
-            else if (timingValue < 0d)
-            {
-                reason = "Timing value must be positive.";
-                result = false;
-            }
-            else
-            {
-                reason = null;
-                result = true;
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Validates various aspects of ICyclopsTaggable and instantiates the appropriate reason as needed.<br/>
-        /// If validation is successful, reason will be null.<br/>
-        /// </summary>
-        /// <param name="taggable"></param>
-        /// <param name="reason"></param>
-        /// <returns>Returns false if validation fails, otherwise returns true.</returns>
-        protected bool ValidateTaggable(ICyclopsTaggable o, out string reason)
-        {
-            reason = null;
-
-            if (o == null)
-            {
-                reason = "ICyclopsTaggable.Tags must not be null.";
-                return false;
-            }
-
-            if (o.Tags.Count == 0)
-            {
-                reason = "ICyclopsTaggable.Tags must contain at least 1 tag.";
-                return false;
-            }
-
-            foreach (var tag in o.Tags)
-            {
-                if (string.IsNullOrWhiteSpace(tag))
-                {
-                    reason = $"Tags for {o.GetType()} can't be null and must contain non-whitespace characters.";
-                    return false;
-                }
-            }
-
-            return true;
-        }
  
 		public CyclopsLambda Add(Action f)
         {
-            return Add(new CyclopsLambda(f));
+            return Add(CyclopsLambda.Instantiate(f));
         }
 
         public CyclopsLambda Add(string tag, Action f)
         {
-            return (CyclopsLambda)Add(new CyclopsLambda(f))
+            return (CyclopsLambda)Add(CyclopsLambda.Instantiate(f))
                 .AddTag(tag);
         }
 
         public CyclopsCoroutine Add(Func<IEnumerator> f)
         {
-            return (CyclopsCoroutine)Add(new CyclopsCoroutine(f));
+            return Add(CyclopsCoroutine.Instantiate(f));
         }
 
         public CyclopsCoroutine Add(string tag, Func<IEnumerator> f)
         {
-            return (CyclopsCoroutine)(Add(new CyclopsCoroutine(f))
+            return (CyclopsCoroutine)(Add(CyclopsCoroutine.Instantiate(f))
                 .AddTag(tag));
         }
 
@@ -241,19 +109,19 @@ namespace Smonch.CyclopsFramework
 
         public CyclopsLambda Loop(Action f)
         {
-            return (CyclopsLambda)Add(new CyclopsLambda(period: 0f, cycles: float.MaxValue, f))
+            return (CyclopsLambda)Add(CyclopsLambda.Instantiate(period: 0f, cycles: float.MaxValue, f))
                 .AddTag(Tag_Loop);
         }
 
         public CyclopsLambda Loop(float period, float cycles, Action f)
         {
-            return (CyclopsLambda)Add(new CyclopsLambda(period, cycles, f))
+            return (CyclopsLambda)Add(CyclopsLambda.Instantiate(period, cycles, f))
                 .AddTag(Tag_Loop);
         }
 
         public CyclopsLambda LoopWhile(Func<bool> predicate, float period = 0f)
         {
-            var routine = Add(new CyclopsLambda(period, float.MaxValue, () =>
+            var routine = Add(CyclopsLambda.Instantiate(period, float.MaxValue, () =>
             {
                 if (!predicate())
                     Context.Stop();
@@ -264,7 +132,7 @@ namespace Smonch.CyclopsFramework
 
         public CyclopsLambda LoopWhile(Func<bool> whilePredicate, Action whileBody, float period = 0f)
         {
-            var routine = Add(new CyclopsLambda(period, float.MaxValue, () =>
+            var routine = Add(CyclopsLambda.Instantiate(period, float.MaxValue, () =>
             {
                 if (whilePredicate())
                 {
@@ -284,7 +152,7 @@ namespace Smonch.CyclopsFramework
 
         public CyclopsRoutine Nop(string tag = null, int cycles=1)
         {
-            var nop = new CyclopsRoutine(period: 0f, cycles: cycles, bias: null, tag: Tag_Nop);
+            var nop = CyclopsNop.Instantiate(cycles);
 
             if (tag != null)
                 nop.AddTag(tag);
@@ -303,49 +171,49 @@ namespace Smonch.CyclopsFramework
         public CyclopsSleep Sleep(float period, string tag=null)
         {
             if (tag == null)
-                return Add(new CyclopsSleep(period));
+                return Add(CyclopsSleep.Instantiate(period));
             else
-                return (CyclopsSleep)Add(new CyclopsSleep(period)).AddTag(tag);
+                return (CyclopsSleep)Add(CyclopsSleep.Instantiate(period)).AddTag(tag);
         }
 
         public CyclopsWaitForMessage Listen(string receiverTag, string messageName)
         {
-            return Add(new CyclopsWaitForMessage(receiverTag, messageName));
+            return Add(CyclopsWaitForMessage.Instantiate(receiverTag, messageName));
         }
 
         public CyclopsWaitForMessage Listen(string receiverTag, string messageName, float timeout, float cycles = 1)
         {
-            return Add(new CyclopsWaitForMessage(receiverTag, messageName, timeout, cycles));
+            return Add(CyclopsWaitForMessage.Instantiate(receiverTag, messageName, timeout, cycles));
         }
         
         public CyclopsTask WaitForTask(Action<CyclopsTask> f)
         {
-            return Add(new CyclopsTask(f));
+            return Add(CyclopsTask.Instantiate(f));
         }
 
         public CyclopsWaitUntil WaitUntil(Func<bool> condition)
         {
-            return Add(new CyclopsWaitUntil(condition));
+            return Add(CyclopsWaitUntil.Instantiate(condition));
         }
 
         public CyclopsWaitUntil WaitUntil(Func<bool> condition, float timeout)
         {
-            return Add(new CyclopsWaitUntil(condition, timeout));
+            return Add(CyclopsWaitUntil.Instantiate(condition, timeout));
         }
 
         public CyclopsWhen When(Func<bool> condition, Action response = null, float timeout = float.MaxValue)
         {
-            return Add(new CyclopsWhen(condition, response, timeout));
+            return Add(CyclopsWhen.Instantiate(condition, response, timeout));
         }
         
         public CyclopsUpdate Lerp(float period, float cycles, Action<float> f)
         {
-            return Add(new CyclopsUpdate(period, cycles, null, f));
+            return Add(CyclopsUpdate.Instantiate(period, cycles, null, f));
         }
 
         public CyclopsUpdate Lerp(float period, Action<float> f)
         {
-            return Add(new CyclopsUpdate(period, 1, null, f));
+            return Add(CyclopsUpdate.Instantiate(period, 1, null, f));
         }
 
         public CyclopsWaitForMessage ProcessAnalytics(string tag, Action<CyclopsMessage> f, int cycles = 1, float timeout = float.MaxValue)
@@ -433,6 +301,138 @@ namespace Smonch.CyclopsFramework
 #else
             Logger?.Invoke(e.ToString());
 #endif
+        }
+
+        /// <summary>
+        /// Validates that a Cyclops Framework tag is actually useful.
+        /// A tag can't be null and must contain at least one non-whitespace character.
+        /// </summary>
+        /// <param name="tag"></param>
+        /// <param name="reason"></param>
+        /// <returns>Returns false if validation fails, otherwise returns true.</returns>
+        protected bool ValidateTag(string tag, out string reason)
+        {
+            reason = null;
+
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                if (tag == null)
+                    reason = "Tag is null.";
+                else
+                    reason = "A tag must contain a least one non-whitespace character.";
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Validates that a timing value which could be used for a timer or routine is actually useful.
+        /// </summary>
+        /// <param name="timingValue"></param>
+        /// <param name="reason"></param>
+        /// <returns>Returns false if validation fails, otherwise returns true.</returns>
+        protected bool ValidateTimingValue(double timingValue, out string reason)
+        {
+            bool result;
+
+            if (double.IsInfinity(timingValue))
+            {
+                reason = "Timing value must be a finite.";
+                result = false;
+            }
+            else if (double.IsNaN(timingValue))
+            {
+                reason = "Timing value must be a number.";
+                result = false;
+            }
+            else if (timingValue < 0d)
+            {
+                reason = "Timing value must be positive.";
+                result = false;
+            }
+            else if (timingValue == 0d)
+            {
+                reason = "Timing value must be greater than zero.";
+                result = false;
+            }
+            else
+            {
+                reason = null;
+                result = true;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Validates that a timing value which could be used for a timer or routine is actually useful.
+        /// Zero is Ok.
+        /// </summary>
+        /// <param name="timingValue"></param>
+        /// <param name="reason"></param>
+        /// <returns>Returns false if validation fails, otherwise returns true.</returns>
+        protected bool ValidateTimingValueWhereZeroIsOk(double timingValue, out string reason)
+        {
+            bool result;
+
+            if (double.IsInfinity(timingValue))
+            {
+                reason = "Timing value must be a finite.";
+                result = false;
+            }
+            else if (double.IsNaN(timingValue))
+            {
+                reason = "Timing value must be a number.";
+                result = false;
+            }
+            else if (timingValue < 0d)
+            {
+                reason = "Timing value must be positive.";
+                result = false;
+            }
+            else
+            {
+                reason = null;
+                result = true;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Validates various aspects of ICyclopsTaggable and instantiates the appropriate reason as needed.<br/>
+        /// If validation is successful, reason will be null.<br/>
+        /// </summary>
+        /// <param name="taggable"></param>
+        /// <param name="reason"></param>
+        /// <returns>Returns false if validation fails, otherwise returns true.</returns>
+        protected bool ValidateTaggable(ICyclopsTaggable o, out string reason)
+        {
+            reason = null;
+
+            if (o == null)
+            {
+                reason = "ICyclopsTaggable.Tags must not be null.";
+                return false;
+            }
+
+            if (o.Tags.Count == 0)
+            {
+                reason = "ICyclopsTaggable.Tags must contain at least 1 tag.";
+                return false;
+            }
+
+            foreach (var tag in o.Tags)
+            {
+                if (string.IsNullOrWhiteSpace(tag))
+                {
+                    reason = $"Tags for {o.GetType()} can't be null and must contain non-whitespace characters.";
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

@@ -40,31 +40,6 @@ namespace Smonch.CyclopsFramework
             "", " ", "\t", "\r", "\v", "\f", "\n", "\t\t", "\t\n\t", "\t  \n  \t"
         };
 
-        //private static string[] ValidTags => new[]
-        //{
-        //    "\t\n!\n\t!\n",
-        //    "*", "*A", "**Abc",
-        //    "!", "!A", "!!Abc",
-        //    " ._#$@!foo.barAbc!@$#_. ",
-        //    string.Join("", Enumerable.Repeat("0123456789ABCDEF", 17))
-        //};
-
-        //private static string[] ValidMessageNames => new[]
-        //{
-        //    "A", "z",
-        //    "A0", "z9",
-        //    "1", "1234567890",
-        //    "The Quick Brown Fox Jumped Over The Lazy Dogs",
-        //    "0___Abc123___9",
-        //    string.Join("", Enumerable.Repeat("0123456789ABCDEF", 17))
-        //};
-
-        //private static object[] ValidMessageSenders => new[]
-        //{
-        //    "", " ", "__a", "Foo", "123",
-        //    0, new object(), new[] { 1, 2, 3 },
-        //};
-
         private static float[] ValidDeltaTimes => new[] {
             float.MaxValue,
             CyclopsCommon.MaxDeltaTime,
@@ -234,6 +209,76 @@ namespace Smonch.CyclopsFramework
             [ValueSource(nameof(InvalidDeltaTimes))] float deltaTime)
         {
             Assert.Throws(typeof(UnityEngine.Assertions.AssertionException), () => Host.Update(deltaTime));
+        }
+
+        [Test]
+        [Category("Smoke")]
+        [Category("Pooling")]
+        public void AddMultipleSetsOfNops_UpdateAfterEach_PassesWithoutException(
+            [Values(CyclopsCommon.MaxDeltaTime)] float deltaTime)
+        {
+            foreach (int iterCount in new[] { 1, 2, 500, 5000, 500, 50, 5000, 10000 })
+            {
+                for (int i = 0; i < iterCount; ++i)
+                    Host.Immediately.Nop();
+
+                Host.Update(deltaTime);
+            }
+
+            Assert.Pass();
+        }
+
+        [Test]
+        [Category("Smoke")]
+        [Category("Tweens")]
+        // Note: We're testing against a Standard Material because it still works (for this purpose) in other pipelines.
+        public void TweenMaterialColor_WithStandardMaterial_MatchesEndColor(
+            [Values("Standard Unlit Test Material")] string materialName,
+            [Values("_Color")] string propertyName,
+            [Values(1f, .8f, .5f, .3f)] float fromValue,
+            [Values(0f, .9f, .2f, .6f)] float toValue,
+            [Values(1f, 2f,  3f)] float period,
+            [Values(CyclopsCommon.MaxDeltaTime)] float deltaTime)
+        {
+            var material = new Material(Resources.Load<Material>(materialName));
+            var fromColor = Color.white * fromValue;
+            var toColor = Color.white * toValue;
+            var propertyId = Shader.PropertyToID(propertyName);
+
+            Assert.AreNotEqual(fromColor, toColor);
+            Assert.GreaterOrEqual(period, CyclopsCommon.MaxDeltaTime * 3f);
+
+            material.SetColor(propertyId, toColor);
+
+            Host.Add(TweenMaterialColor.Instantiate(material, propertyId, fromColor, toColor, period: 1f, cycles: 1f));
+            Host.Update(deltaTime);
+
+            // TODO: Cook up a more robust solution for this.
+            System.Func<Color, int> q = c => Mathf.RoundToInt(c.grayscale * 1000f);
+
+            Assert.AreEqual(q(material.GetColor(propertyId)), q(toColor));
+
+            Host.Update(deltaTime);
+
+            Assert.AreNotEqual(q(material.GetColor(propertyId)), q(toColor));
+
+            Host.Update(deltaTime);
+
+            if (fromValue < toValue)
+                Assert.Less(q(material.GetColor(propertyId)), q(toColor));
+            else
+                Assert.Greater(q(material.GetColor(propertyId)), q(toColor));
+
+            Assert.AreNotEqual(q(material.GetColor(propertyId)), q(fromColor));
+
+            // Overshooting
+            for (float t = 0f; t < period; t += CyclopsCommon.MaxDeltaTime)
+                Host.Update(deltaTime);
+
+            Assert.AreEqual(q(material.GetColor(propertyId)), q(toColor));
+
+            Object.Destroy(material);
+            Resources.UnloadUnusedAssets();
         }
 
         [Test]
@@ -439,5 +484,30 @@ namespace Smonch.CyclopsFramework
 
             Assert.IsTrue(wasReceived);
         }
+
+        //private static string[] ValidTags => new[]
+        //{
+        //    "\t\n!\n\t!\n",
+        //    "*", "*A", "**Abc",
+        //    "!", "!A", "!!Abc",
+        //    " ._#$@!foo.barAbc!@$#_. ",
+        //    string.Join("", Enumerable.Repeat("0123456789ABCDEF", 17))
+        //};
+
+        //private static string[] ValidMessageNames => new[]
+        //{
+        //    "A", "z",
+        //    "A0", "z9",
+        //    "1", "1234567890",
+        //    "The Quick Brown Fox Jumped Over The Lazy Dogs",
+        //    "0___Abc123___9",
+        //    string.Join("", Enumerable.Repeat("0123456789ABCDEF", 17))
+        //};
+
+        //private static object[] ValidMessageSenders => new[]
+        //{
+        //    "", " ", "__a", "Foo", "123",
+        //    0, new object(), new[] { 1, 2, 3 },
+        //};
     }
 }

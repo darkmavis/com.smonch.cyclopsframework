@@ -27,27 +27,62 @@ namespace Smonch.CyclopsFramework
 
         private Action<CyclopsMessage> SuccessHandler { get; set; }
 
-        public CyclopsRoutine OnSuccess(Action<CyclopsMessage> successHandler)
-        {
-            SuccessHandler = successHandler;
-            return this;
-        }
-
-        public CyclopsWaitForMessage(string receiverTag, string messageName)
+        private CyclopsWaitForMessage(string receiverTag, string messageName)
             : base(double.MaxValue, 1, null, Tag)
         {
             AddTag(receiverTag);
             _messageName = messageName;
         }
 
-        public CyclopsWaitForMessage(string receiverTag, string messageName, double timeout, double cycles)
+        private CyclopsWaitForMessage(string receiverTag, string messageName, double timeout, double cycles)
             : base(timeout, cycles, null, Tag)
         {
             AddTag(receiverTag);
             _messageName = messageName;
         }
 
-        public void InterceptMessage(CyclopsMessage msg)
+        public static CyclopsWaitForMessage Instantiate(string receiverTag, string messageName)
+        {
+            if (TryInstantiateFromPool(() => new CyclopsWaitForMessage(receiverTag, messageName), out var result))
+            {
+                result._messageName = messageName;
+            }
+
+            result.AddTag(receiverTag);
+
+            return result;
+        }
+
+        public static CyclopsWaitForMessage Instantiate(string receiverTag, string messageName, double timeout, double cycles)
+        {
+            if (TryInstantiateFromPool(() => new CyclopsWaitForMessage(receiverTag, messageName, timeout, cycles), out var result))
+            {
+                result.Period = timeout;
+                result.MaxCycles = cycles;
+
+                result._messageName = messageName;
+            }
+
+            result.AddTag(receiverTag);
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _messageName = null;
+            _timedOut = false;
+
+            SuccessHandler = null;
+        }
+
+        public CyclopsRoutine OnSuccess(Action<CyclopsMessage> successHandler)
+        {
+            SuccessHandler = successHandler;
+            return this;
+        }
+
+        void ICyclopsMessageInterceptor.InterceptMessage(CyclopsMessage msg)
         {
             if ((_messageName == null) || (_messageName == msg.name))
             {

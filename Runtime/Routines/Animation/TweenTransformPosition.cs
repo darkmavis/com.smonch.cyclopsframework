@@ -24,28 +24,56 @@ namespace Smonch.CyclopsFramework
         public const string Tag = TagPrefix_Cyclops + "TweenTransformPosition";
 
         private Transform _transform;
-        private Vector3? _fromPosition;
-        private Vector3? _toPosition;
-        private Vector3 _a;
-        private Vector3 _b;
+        private Tween3f _tween;
 
-        public TweenTransformPosition(Transform transform, Vector3? fromPosition = null, Vector3? toPosition = null, float period = 0f, float cycles = 1f, Func<float, float> bias = null)
+        private TweenTransformPosition(
+            Transform transform,
+            Vector3? fromPosition = null,
+            Vector3? toPosition = null,
+            float period = 0f,
+            float cycles = 1f,
+            Func<float, float> bias = null)
             : base(period, cycles, bias, Tag)
         {
             _transform = transform;
-            _fromPosition = fromPosition;
-            _toPosition = toPosition;
+            _tween.SetFromTo(fromPosition, toPosition);
+        }
+
+        public static TweenTransformPosition Instantiate(
+            Transform transform,
+            Vector3? fromPosition = null,
+            Vector3? toPosition = null,
+            float period = 0f,
+            float cycles = 1f,
+            Func<float, float> bias = null)
+        {
+            if (TryInstantiateFromPool(() => new TweenTransformPosition(transform, fromPosition, toPosition, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._transform = transform;
+                result._tween.SetFromTo(fromPosition, toPosition);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _transform = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromPosition ?? _transform.position;
-            _b = _toPosition ?? _transform.position;
+            _tween.Fallback = _transform.position;
         }
 
         protected override void OnUpdate(float t)
         {
-            _transform.position = Vector3.Lerp(_a, _b, t);
+            _transform.position = _tween.Evaluate(t);
         }
     }
 }

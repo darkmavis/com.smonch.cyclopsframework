@@ -22,16 +22,35 @@ namespace Smonch.CyclopsFramework
     {
         public const string Tag = TagPrefix_Cyclops + "CyclopsWhen";
 
-        Func<bool> _f;
-		Action _g;
-
-        bool _wasSuccessful = false;
+        private Func<bool> _f;
+        private Action _g;
+        private bool _wasSuccessful = false;
 		
-        public CyclopsWhen(Func<bool> f, Action g = null, double timeout = double.MaxValue)
+        private  CyclopsWhen(Func<bool> f, Action g = null, double timeout = double.MaxValue)
             : base(timeout, 1f, null, Tag)
         {
             _f = f;
 			_g = g;
+        }
+
+        public static CyclopsWhen Instantiate(Func<bool> f, Action g = null, double timeout = double.MaxValue)
+        {
+            if (TryInstantiateFromPool(() => new CyclopsWhen(f, g, timeout), out var result))
+            {
+                result.Period = timeout;
+
+                result._f = f;
+                result._g = g;
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _f = null;
+            _g = null;
+            _wasSuccessful = false;
         }
 
         protected override void OnUpdate(float t)
@@ -46,6 +65,7 @@ namespace Smonch.CyclopsFramework
 
         protected override void OnExit()
         {
+            // Close enough?
             if ((Math.Abs(Position - Period) < .00001d) && !_wasSuccessful)
                 Fail();
         }

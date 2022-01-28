@@ -24,15 +24,12 @@ namespace Smonch.CyclopsFramework
         public const string Tag = TagPrefix_Cyclops + "TweenMaterialTextureScale";
 
         private Material _material;
-        private int _nameID;
-        private Vector2? _fromUvScale;
-        private Vector2? _toUvScale;
-        private Vector2 _a;
-        private Vector2 _b;
+        private int _nameId;
+        private Tween2f _tween;
 
-        public TweenMaterialTextureScale(
+        private TweenMaterialTextureScale(
             Material material,
-            string textureName,
+            int nameId,
             Vector2? fromUvScale = null,
             Vector2? toUvScale = null,
             float period = 0f,
@@ -41,36 +38,47 @@ namespace Smonch.CyclopsFramework
             : base(period, cycles, bias, Tag)
         {
             _material = material;
-            _nameID = Shader.PropertyToID(textureName);
-            _fromUvScale = fromUvScale;
-            _toUvScale = toUvScale;
+            _nameId = nameId;
+            _tween.SetFromTo(fromUvScale, toUvScale);
         }
 
-        public TweenMaterialTextureScale(
+        public static TweenMaterialTextureScale Instantiate(
             Material material,
-            int nameID,
+            int nameId,
             Vector2? fromUvScale = null,
             Vector2? toUvScale = null,
             float period = 0f,
             float cycles = 1f,
             Func<float, float> bias = null)
-            : base(period, cycles, bias, Tag)
         {
-            _material = material;
-            _nameID = nameID;
-            _fromUvScale = fromUvScale;
-            _toUvScale = toUvScale;
+            if (TryInstantiateFromPool(() => new TweenMaterialTextureScale(material, nameId, fromUvScale, toUvScale, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._material = material;
+                result._nameId = nameId;
+                result._tween.SetFromTo(fromUvScale, toUvScale);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _material = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromUvScale ?? _material.GetTextureScale(_nameID);
-            _b = _toUvScale ?? _material.GetTextureScale(_nameID);
+            _tween.Fallback = _material.GetTextureScale(_nameId);
         }
 
         protected override void OnUpdate(float t)
         {
-            _material.SetTextureScale(_nameID, Vector2.Lerp(_a, _b, t));
+            _material.SetTextureScale(_nameId, _tween.Evaluate(t));
         }
     }
 }

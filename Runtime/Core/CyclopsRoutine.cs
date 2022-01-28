@@ -21,21 +21,26 @@ using UnityEngine.Assertions;
 
 namespace Smonch.CyclopsFramework
 {
-    public class CyclopsRoutine : CyclopsCommon, ICyclopsDisposable, ICyclopsPausable, ICyclopsTaggable
+    public abstract class CyclopsRoutine : CyclopsCommon, ICyclopsDisposable, ICyclopsPausable, ICyclopsTaggable
     {
         // These collections provide a way to ease up on allocations.
-        private static ConcurrentBag<List<string>> _tagCollectionPool;
-        private static ConcurrentBag<List<CyclopsRoutine>> _childRoutineCollectionPool;
+        private static ConcurrentBag<List<string>> _tagCollectionPool = new ConcurrentBag<List<string>>();
+        private static ConcurrentBag<List<CyclopsRoutine>> _childRoutineCollectionPool = new ConcurrentBag<List<CyclopsRoutine>>();
+
+        private static CyclopsPool<CyclopsRoutine> Pool { get; set; } = new CyclopsPool<CyclopsRoutine>();
+
+        private bool _canSyncAtStart;
+        private bool _isPooled;
+        private bool _isReadyToCallFirstFrameAgain;
+        private bool _shouldStoppageCallLastFrame;
+        
+        private string _initialTag = Tag_Undefined;
+
+        private Func<CyclopsRoutine, bool> _stoppagePredicate;
 
         // Use a linear bias by default: t => t;
         // Please note that all built-in Bias methods make an attempt to benefit from: MethodImplOptions.AggressiveInlining
-        private Func<float, float> _bias = null;
-
-        private bool _canSyncAtStart;
-        private bool _readyToCallFirstFrameAgain;
-        private bool _shouldStoppageCallLastFrame;
-        private Func<CyclopsRoutine, bool> _stoppagePredicate;
-        private bool _tagsAreDirty;
+        protected Func<float, float> Bias { get; set; } = null;
 
         /// <summary>
         /// This provides a way to gracefully handle failures such as timeouts when waiting for an event or polling for a particular state.
@@ -43,6 +48,8 @@ namespace Smonch.CyclopsFramework
         private Action FailureHandler { get; set; }
         
         internal int NestingDepth { get; set; }
+
+        protected bool MustRecycleIfPooled { get; set; } = true;
 
         /// <summary>
         /// This is used by CyclopsEngine and provides a way to skip adding this routine to the active queue if the specified condition is met.
@@ -53,11 +60,11 @@ namespace Smonch.CyclopsFramework
 
         public double Age { get; private set; }
         
-        public double Period { get; private set; }
+        public double Period { get; protected set; }
         
         public double Cycle { get; private set; }
         
-        public double MaxCycles { get; private set; }
+        public double MaxCycles { get; protected set; }
         
         public double Position { get => (((Age - Cycle) >= 1.0) ? 1.0 : (Age - Cycle)); }
         
@@ -66,35 +73,21 @@ namespace Smonch.CyclopsFramework
         // Pooled
         public List<string> Tags { get; private set; }
 
-        private string _cachedCsvTagsText;
-
-        // Note: This smells like an extension method.
-        public string TagsAsCachedCsvText
-        {
-            get
-            {
-                if (_tagsAreDirty)
-                {
-                    _cachedCsvTagsText = string.Join(",", Tags);
-                    _tagsAreDirty = false;
-                }
-
-                return _cachedCsvTagsText;
-            }
-        }
-
         // Pooled
         public List<CyclopsRoutine> Children { get; private set; }
         
         public virtual bool IsPaused { get; set; } = false;
 
         public bool IsActive { get; private set; } = true;
-
-        // These collections provide a way to ease up on allocations.
-        static CyclopsRoutine()
+                
+        public CyclopsRoutine(double period, double cycles, string tag)
         {
-            _childRoutineCollectionPool = new ConcurrentBag<List<CyclopsRoutine>>();
-            _tagCollectionPool = new ConcurrentBag<List<string>>();
+            Initialize(period, cycles, bias: null, tag);
+        }
+
+        public CyclopsRoutine(double period, double cycles, Func<float, float> bias, string tag)
+        {
+            Initialize(period, cycles, bias, tag);
         }
 
         /// <summary>
@@ -104,23 +97,44 @@ namespace Smonch.CyclopsFramework
         /// <param name="cycles"></param>
         /// <param name="bias"></param>
         /// <param name="tag"></param>
-        public CyclopsRoutine(double period, double cycles, Func<float, float> bias, string tag)
-            : base()
+        protected void Initialize(double period, double cycles, Func<float, float> bias, string tag)
         {
             Assert.IsTrue(ValidateTimingValueWhereZeroIsOk(period, out var reason), reason);
             Assert.IsTrue(ValidateTimingValue(cycles, out reason), reason);
-            // No assertion for a null tag here. Tags can be added later.
+            Assert.IsTrue(ValidateTag(tag, out reason), reason);
 
             Context = this;
             MaxCycles = cycles;
             Period = period;
             Speed = 1d;
 
-            _bias = bias ?? Bias.Linear;
+            Bias = bias ?? CyclopsFramework.Bias.Linear;
 
             InitializeCollections();
 
             AddTag(tag ?? Tag_Undefined);
+
+            _initialTag = tag;
+        }
+
+        private void Reinitialize()
+        {
+            Initialize(Period, MaxCycles, Bias, _initialTag);
+        }
+
+        protected static bool TryInstantiateFromPool<T>(Func<T> routineFactory, out T result) where T : CyclopsRoutine
+        {
+            bool wasFound = false;
+
+            if (Pool.Rent(routineFactory, out result))
+            {
+                wasFound = true;
+                result.Reinitialize();
+            }
+
+            result._isPooled = true;
+
+            return wasFound;
         }
 
         private void InitializeCollections()
@@ -139,24 +153,45 @@ namespace Smonch.CyclopsFramework
 
             Tags = tags;
         }
-
+        
         void ICyclopsDisposable.Dispose()
         {
+            Bias = null;
+            _canSyncAtStart = false;
+            _isReadyToCallFirstFrameAgain = false;
+            _shouldStoppageCallLastFrame = false;
+            _stoppagePredicate = null;
+
+            Age = 0d;
+            Context = null;
+            Cycle = 0d;
+            FailureHandler = null;
+            Host = null;
+            IsActive = false;
+            IsPaused = false;
+            MaxCycles = 0d;
+            NestingDepth = 0;
+            Period = 0d;
+            SkipPredicate = null;
+            Speed = 1d;
+
             Children.Clear();
             _childRoutineCollectionPool.Add(Children);
-
-            // Prevent any possibility of accidentally accessing this in the future.
-            // This has nothing to do with thread safety.
             Children = null;
 
             Tags.Clear();
             _tagCollectionPool.Add(Tags);
-
-            // Prevent any possibility of accidentally accessing this in the future.
-            // This has nothing to do with thread safety.
             Tags = null;
-        }
 
+            if (_isPooled)
+            {
+                if (MustRecycleIfPooled)
+                    OnRecycle();
+
+                Pool.Release(this);
+            }
+        }
+        
         public override T Add<T>(T routine)
         {
             Assert.IsNotNull(routine);
@@ -173,7 +208,6 @@ namespace Smonch.CyclopsFramework
                 tag = Tag_Undefined;
 
             Tags.Add(tag);
-            _tagsAreDirty = true;
 
             return this;
         }
@@ -283,7 +317,7 @@ namespace Smonch.CyclopsFramework
                 OnFirstFrame();
 
                 if (_canSyncAtStart)
-                    OnUpdate((_bias == null) ? 0f : _bias(0f));
+                    OnUpdate((Bias == null) ? 0f : Bias(0f));
             }
 
             if (Age >= MaxCycles)
@@ -292,7 +326,7 @@ namespace Smonch.CyclopsFramework
                 return;
             }
 
-            if (_readyToCallFirstFrameAgain)
+            if (_isReadyToCallFirstFrameAgain)
                 OnFirstFrame();
 
             // If period is 0 then age is naturally incremented.
@@ -312,15 +346,15 @@ namespace Smonch.CyclopsFramework
             
             if (t <= 1f)
             {
-                OnUpdate((_bias == null) ? t : _bias(t));
+                OnUpdate((Bias == null) ? t : Bias(t));
             }
             else if (Age >= MaxCycles)
             {
-                OnUpdate((_bias == null) ? 1f : _bias(1f));
+                OnUpdate((Bias == null) ? 1f : Bias(1f));
             }
             else
             {
-                OnUpdate((_bias == null) ? t - 1f : _bias(t - 1f));
+                OnUpdate((Bias == null) ? t - 1f : Bias(t - 1f));
             }
 
             // Cycle lags Age. This provides a way to know if OnLastFrame should be called.
@@ -340,7 +374,7 @@ namespace Smonch.CyclopsFramework
                         return;
                     }
 
-                    _readyToCallFirstFrameAgain = true;
+                    _isReadyToCallFirstFrameAgain = true;
                 }
                 else
                 {
@@ -364,5 +398,13 @@ namespace Smonch.CyclopsFramework
         protected virtual void OnUpdate(float t) { }
         protected virtual void OnLastFrame() { }
         protected virtual void OnExit() { }
+
+        protected virtual void OnRecycle()
+        {
+            if (_isPooled)
+                throw new NotImplementedException("OnRecycle must be implemented when pooling is utilized and MustRecycleIfPooled == true");
+            else
+                throw new NotImplementedException("OnRecycle must be implemented when pooling is utilized, but pooling is not being utilized and it was called anyway.");
+        }
     }
 }

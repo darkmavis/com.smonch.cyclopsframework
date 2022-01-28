@@ -22,29 +22,57 @@ namespace Smonch.CyclopsFramework
     {
         public static readonly string Tag = TagPrefix_Cyclops + "TweenAudioSourceVolume";
 
-        AudioSource _source;
-        float? _fromVolume;
-        float? _toVolume;
-        float _a;
-        float _b;
+        private AudioSource _source;
+        private Tween1f _tween;
 
-        public TweenAudioSourceVolume(AudioSource source, float? fromVolume, float? toVolume, float period = 0, float cycles = 1, System.Func<float, float> bias = null)
+        public TweenAudioSourceVolume(
+            AudioSource source,
+            float? fromVolume,
+            float? toVolume,
+            float period = 0,
+            float cycles = 1,
+            System.Func<float, float> bias = null)
             : base(period, cycles, bias, Tag)
         {
             _source = source;
-            _fromVolume = fromVolume;
-            _toVolume = toVolume;
+            _tween.SetFromTo(fromVolume, toVolume);
 		}
+
+        public static TweenAudioSourceVolume Instantiate(
+            AudioSource source,
+            float? fromVolume,
+            float? toVolume,
+            float period = 0f,
+            float cycles = 1f,
+            System.Func<float, float> bias = null)
+        {
+            if (TryInstantiateFromPool(() => new TweenAudioSourceVolume(source, fromVolume, toVolume, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._source = source;
+                result._tween.SetFromTo(fromVolume, toVolume);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _source = null;
+            _tween.Reset();
+        }
 
         protected override void OnEnter()
         {
-            _a = _fromVolume ?? _source.volume;
-            _b = _toVolume ?? _source.volume;
+            _tween.Fallback = _source.volume;
         }
 
         protected override void OnUpdate(float t)
         {
-            _source.volume = Mathf.Lerp(_a, _b, t);
+            _source.volume = _tween.Evaluate(t);
         }
     }
 }

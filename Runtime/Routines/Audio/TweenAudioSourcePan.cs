@@ -22,29 +22,56 @@ namespace Smonch.CyclopsFramework
     {
         public const string Tag = TagPrefix_Cyclops + "TweenAudioSourcePan";
 
-        AudioSource _source;
-        float? _fromPan;
-        float? _toPan;
-        float _a;
-        float _b;
+        private AudioSource _source;
+        private Tween1f _tween;
 
-        public TweenAudioSourcePan(AudioSource source, float? fromPan, float? toPan, float period=0f, float cycles=1f, System.Func<float, float> bias = null)
+        public TweenAudioSourcePan(
+            AudioSource source,
+            float? fromPan,
+            float? toPan,
+            float period = 0f,
+            float cycles = 1f,
+            System.Func<float, float> bias = null)
             : base(period, cycles, bias, Tag)
         {
             _source = source;
-            _fromPan = fromPan;
-            _toPan = toPan;
-		}
+            _tween.SetFromTo(fromPan, toPan);
+        }
 
+        public static TweenAudioSourcePan Instantiate(
+            AudioSource source,
+            float? fromPan,
+            float? toPan,
+            float period = 0f,
+            float cycles = 1f,
+            System.Func<float, float> bias = null)
+        {
+            if (TryInstantiateFromPool(() => new TweenAudioSourcePan(source, fromPan, toPan, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._source = source;
+                result._tween.SetFromTo(fromPan, toPan);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _source = null;
+            _tween.Reset();
+        }
         protected override void OnEnter()
         {
-            _a = _fromPan ?? _source.panStereo;
-            _b = _toPan ?? _source.panStereo;
+            _tween.Fallback = _source.panStereo;
         }
 
         protected override void OnUpdate(float t)
         {
-            _source.panStereo = Mathf.Lerp(_a, _b, t);
+            _source.panStereo = _tween.Evaluate(t);
         }
     }
 }

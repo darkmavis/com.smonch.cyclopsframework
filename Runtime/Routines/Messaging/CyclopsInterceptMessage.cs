@@ -22,18 +22,35 @@ namespace Smonch.CyclopsFramework
 		
 		public delegate void Fd(CyclopsMessage msg);
 		
-		Fd _fd;
+		private Fd _fd;
 		
-		public CyclopsInterceptMessage(double period, double cycles, Fd f)
+		private CyclopsInterceptMessage(double period, double cycles, Fd f)
             : base(period, cycles, null, Tag)
         {
 			_fd = f;
         }
-		
+
+		public static CyclopsInterceptMessage Instantiate(double period, double cycles, Fd f)
+        {
+			if (TryInstantiateFromPool(() => new CyclopsInterceptMessage(period, cycles, f), out var result))
+			{
+				result.Period = period;
+				result.MaxCycles = cycles;
+
+				result._fd = f;
+			}
+
+			return result;
+		}
+
+		protected override void OnRecycle()
+		{
+			_fd = null;
+		}
+
 		public void InterceptMessage (CyclopsMessage msg)
 		{
 			_fd(msg);
 		}
-
-	}
+    }
 }

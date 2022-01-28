@@ -24,28 +24,56 @@ namespace Smonch.CyclopsFramework
         public const string Tag = TagPrefix_Cyclops + "TweenTransformRotation";
 
         private Transform _transform;
-        private Quaternion? _fromRotation;
-        private Quaternion? _toRotation;
-        private Quaternion _a;
-        private Quaternion _b;
+        private TweenQs _tween;
 
-        public TweenTransformRotation(Transform transform, Quaternion? fromRotation = null, Quaternion? toRotation = null, float period = 0f, float cycles = 1f, Func<float, float> bias = null)
+        private TweenTransformRotation(
+            Transform transform,
+            Quaternion? fromRotation = null,
+            Quaternion? toRotation = null,
+            float period = 0f,
+            float cycles = 1f,
+            Func<float, float> bias = null)
             : base(period, cycles, bias, Tag)
         {
             _transform = transform;
-            _fromRotation = fromRotation;
-            _toRotation = toRotation;
+            _tween.SetFromTo(fromRotation, toRotation);
+        }
+
+        public static TweenTransformRotation Instantiate(
+            Transform transform,
+            Quaternion? fromRotation = null,
+            Quaternion? toRotation = null,
+            float period = 0f,
+            float cycles = 1f,
+            Func<float, float> bias = null)
+        {
+            if (TryInstantiateFromPool(() => new TweenTransformRotation(transform, fromRotation, toRotation, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._transform = transform;
+                result._tween.SetFromTo(fromRotation, toRotation);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _transform = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromRotation ?? _transform.rotation;
-            _b = _toRotation ?? _transform.rotation;
+            _tween.Fallback = _transform.rotation;
         }
 
         protected override void OnUpdate(float t)
         {
-            _transform.rotation = Quaternion.Slerp(_a, _b, t);
+            _transform.rotation = _tween.Evaluate(t);
         }
     }
 }

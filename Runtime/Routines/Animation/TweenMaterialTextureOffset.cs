@@ -24,15 +24,12 @@ namespace Smonch.CyclopsFramework
         public const string Tag = TagPrefix_Cyclops + "TweenMaterialTextureOffset";
 
         private Material _material;
-        private int _nameID;
-        private Vector2? _fromUV;
-        private Vector2? _toUV;
-        private Vector2 _a;
-        private Vector2 _b;
+        private int _nameId;
+        private Tween2f _tween;
         
-        public TweenMaterialTextureOffset(
+        private TweenMaterialTextureOffset(
             Material material,
-            string textureName,
+            int nameId,
             Vector2? fromUv = null,
             Vector2? toUv = null,
             float period = 0f,
@@ -41,36 +38,47 @@ namespace Smonch.CyclopsFramework
             : base(period, cycles, bias, Tag)
         {
             _material = material;
-            _nameID = Shader.PropertyToID(textureName);
-            _fromUV = fromUv;
-            _toUV = toUv;
+            _nameId = nameId;
+            _tween.SetFromTo(fromUv, toUv);
         }
 
-        public TweenMaterialTextureOffset(
+        public static TweenMaterialTextureOffset Instantiate(
             Material material,
-            int nameID,
+            int nameId,
             Vector2? fromUv = null,
             Vector2? toUv = null,
             float period = 0f,
             float cycles = 1f,
             Func<float, float> bias = null)
-            : base(period, cycles, bias, Tag)
         {
-            _material = material;
-            _nameID = nameID;
-            _fromUV = fromUv;
-            _toUV = toUv;
+            if (TryInstantiateFromPool(() => new TweenMaterialTextureOffset(material, nameId, fromUv, toUv, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._material = material;
+                result._nameId = nameId;
+                result._tween.SetFromTo(fromUv, toUv);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _material = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromUV ?? _material.GetTextureOffset(_nameID);
-            _b = _toUV ?? _material.GetTextureOffset(_nameID);
+            _tween.Fallback = _material.GetTextureOffset(_nameId);
         }
 
         protected override void OnUpdate(float t)
         {
-            _material.SetTextureOffset(_nameID, Vector2.Lerp(_a, _b, t));
+            _material.SetTextureOffset(_nameId, _tween.Evaluate(t));
         }
     }
 }

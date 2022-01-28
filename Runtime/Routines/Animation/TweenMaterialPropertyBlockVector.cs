@@ -25,12 +25,9 @@ namespace Smonch.CyclopsFramework
 
         private MaterialPropertyBlock _block;
         private int _propertyId;
-        private Vector4? _fromVector;
-        private Vector4? _toVector;
-        private Vector4 _a;
-        private Vector4 _b;
+        private Tween4f _tween;
 
-        public TweenMaterialPropertyBlockVector(
+        private TweenMaterialPropertyBlockVector(
             MaterialPropertyBlock block,
             int propertyId,
             Vector4? fromVector = null,
@@ -42,35 +39,46 @@ namespace Smonch.CyclopsFramework
         {
             _block = block;
             _propertyId = propertyId;
-            _fromVector = fromVector;
-            _toVector = toVector;
+            _tween.SetFromTo(fromVector, toVector);
         }
 
-        public TweenMaterialPropertyBlockVector(
+        public static TweenMaterialPropertyBlockVector Instantiate(
             MaterialPropertyBlock block,
-            string propertyName,
+            int propertyId,
             Vector4? fromVector = null,
             Vector4? toVector = null,
             float period = 0f,
             float cycles = 1f,
             Func<float, float> bias = null)
-            : base(period, cycles, bias, Tag)
         {
-            _block = block;
-            _propertyId = Shader.PropertyToID(propertyName);
-            _fromVector = fromVector;
-            _toVector = toVector;
+            if (TryInstantiateFromPool(() => new TweenMaterialPropertyBlockVector(block, propertyId, fromVector, toVector, period, cycles, bias), out var result))
+            {
+                result.Period = period;
+                result.MaxCycles = cycles;
+                result.Bias = bias;
+
+                result._block = block;
+                result._propertyId = propertyId;
+                result._tween.SetFromTo(fromVector, toVector);
+            }
+
+            return result;
+        }
+
+        protected override void OnRecycle()
+        {
+            _block = null;
+            _tween.Reset();
         }
 
         protected override void OnEnter()
         {
-            _a = _fromVector ?? _block.GetVector(_propertyId);
-            _b = _toVector ?? _block.GetVector(_propertyId);
+            _tween.Fallback = _block.GetVector(_propertyId);
         }
 
         protected override void OnUpdate(float t)
         {
-            _block.SetVector(_propertyId, Vector4.Lerp(_a, _b, t));
+            _block.SetVector(_propertyId, _tween.Evaluate(t));
         }
     }
 }
