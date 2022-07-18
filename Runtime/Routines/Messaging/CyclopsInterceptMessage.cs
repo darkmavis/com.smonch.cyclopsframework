@@ -18,7 +18,7 @@ namespace Smonch.CyclopsFramework
 {
 	public class CyclopsInterceptMessage : CyclopsRoutine, ICyclopsMessageInterceptor
 	{
-        public static readonly string Tag = TagPrefix_Cyclops + "CyclopsInterceptMessage";
+		public static readonly string Tag = TagPrefix_Cyclops + nameof(CyclopsInterceptMessage);
 		
 		public delegate void Fd(CyclopsMessage msg);
 		

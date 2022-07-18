@@ -14,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Smonch.CyclopsFramework.Extensions;
 using System.Collections.Generic;
 
 namespace Smonch.CyclopsFramework
@@ -55,20 +54,27 @@ namespace Smonch.CyclopsFramework
                     activeState.Start();
 
                 if (activeState.QueryTransitions(out var nextState))
+                {
                     activeState.Stop();
+                }
                 else
+                {
                     activeState.Update();
 
-                if (activeState.QueryTransitions(out nextState))
-                    activeState.Stop();
+                    if (activeState.QueryTransitions(out nextState))
+                        activeState.Stop();
+                }
 
                 if (activeState.IsStopping)
                 {
-                    activeState.Stop(callerType: GetType());
+                    activeState.StopImmediately();
                     _stateStack.Pop();
 
+                    // Still required? Check this.
                     if (nextState == null)
                         activeState.QueryTransitions(out nextState);
+
+                    activeState.Dispose();
                 }
 
                 if (nextState != null)

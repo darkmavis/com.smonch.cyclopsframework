@@ -21,7 +21,7 @@ namespace Smonch.CyclopsFramework
 {
     public sealed class CyclopsCoroutine : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + "CyclopsCoroutine";
+        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsCoroutine);
 
         private Func<IEnumerator> _f;
 

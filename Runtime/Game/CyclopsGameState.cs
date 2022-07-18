@@ -15,18 +15,25 @@
 // limitations under the License.
 
 using UnityEngine;
+using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsGameState : CyclopsState
     {
-        protected CyclopsEngine Engine { get; private set; } = new CyclopsEngine();
+        protected CyclopsEngine Engine { get; private set; } = GenericPool<CyclopsEngine>.Get();
         protected virtual float DeltaTime => Time.deltaTime;
 
         public sealed override void Update(bool isLayeredUpdate = false)
         {
             base.Update();
             Engine.Update(DeltaTime);
+        }
+
+        protected sealed override void OnDisposed()
+        {
+            Engine.Reset();
+            GenericPool<CyclopsEngine>.Release(Engine);
         }
     }
 }

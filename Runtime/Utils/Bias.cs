@@ -57,7 +57,7 @@ namespace Smonch.CyclopsFramework
         public static float Zero(float t) => 0f;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float SawtoothWave(float t) => (t <= 0.5f) ? (t * 2f) : (2f - t * 2f);
+        public static float SawWave(float t) => (t <= 0.5f) ? (t * 2f) : (2f - t * 2f);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float SquareWave(float t) => (t < 0.5f) ? 0f : 1f;
@@ -84,7 +84,6 @@ namespace Smonch.CyclopsFramework
             {
                 t = -t;
                 return (t < 1f) ? -f(t) : f(1f);
-                
             }
             else
             {

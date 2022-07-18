@@ -1,4 +1,4 @@
-// Cyclops Framework
+﻿// Cyclops Framework
 // 
 // Copyright 2010 - 2022 Mark Davis
 // 
@@ -14,12 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System.Collections.Generic;
-
 namespace Smonch.CyclopsFramework
 {
-    public interface ICyclopsTaggable
+    internal interface ICyclopsRoutineScheduler
     {
-        HashSet<string> Tags { get; }
+        T Add<T>(T routine) where T : CyclopsRoutine;
     }
 }

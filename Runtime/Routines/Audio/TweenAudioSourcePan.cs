@@ -20,7 +20,7 @@ namespace Smonch.CyclopsFramework
 {
     public class TweenAudioSourcePan : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + "TweenAudioSourcePan";
+        public const string Tag = TagPrefix_Cyclops + nameof(TweenAudioSourcePan);
 
         private AudioSource _source;
         private Tween1f _tween;

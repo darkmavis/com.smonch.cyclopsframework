@@ -23,7 +23,7 @@ namespace Smonch.CyclopsFramework
 {
     public sealed class CyclopsTask : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + "CyclopsTask";
+        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsTask);
         
         private Task _task;
         private CancellationTokenSource _tokenSource;

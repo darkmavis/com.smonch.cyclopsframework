@@ -21,7 +21,7 @@ namespace Smonch.CyclopsFramework
 {
     public class TweenTransformScale : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + "TweenTransformScale";
+        public const string Tag = TagPrefix_Cyclops + nameof(TweenTransformScale);
 
         private Transform _transform;
         private Tween3f _tween;

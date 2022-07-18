@@ -20,7 +20,7 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsUpdate : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + "CyclopsUpdate";
+        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsUpdate);
 
         private Action _f = null;
 		private Action<float> _ft = null;
@@ -47,14 +47,16 @@ namespace Smonch.CyclopsFramework
             double period,
             Action f)
         {
-            if (TryInstantiateFromPool(() => new CyclopsUpdate(period, f), out var result))
-            {
-                result.Period = period;
+            return new CyclopsUpdate(period, f);
 
-                result._f = f;
-            }
+            //if (TryInstantiateFromPool(() => new CyclopsUpdate(period, f), out var result))
+            //{
+            //    result.Period = period;
 
-            return result;
+            //    result._f = f;
+            //}
+
+            //return result;
         }
 
         public static CyclopsUpdate Instantiate(
@@ -63,16 +65,18 @@ namespace Smonch.CyclopsFramework
             Func<float, float> bias,
             Action<float> ft)
         {
-            if (TryInstantiateFromPool(() => new CyclopsUpdate(period, cycles, bias, ft), out var result))
-            {
-                result.Period = period;
-                result.MaxCycles = cycles;
-                result.Bias = bias;
+            return new CyclopsUpdate(period, cycles, bias, ft);
 
-                result._ft = ft;
-            }
+            //if (TryInstantiateFromPool(() => new CyclopsUpdate(period, cycles, bias, ft), out var result))
+            //{
+            //    result.Period = period;
+            //    result.MaxCycles = cycles;
+            //    result.Bias = bias;
 
-            return result;
+            //    result._ft = ft;
+            //}
+
+            //return result;
         }
 
         protected override void OnRecycle()
