@@ -21,7 +21,7 @@ namespace Smonch.CyclopsFramework
 {
     public class TweenTransformPosition : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + "TweenTransformPosition";
+        public const string Tag = TagPrefix_Cyclops + nameof(TweenTransformPosition);
 
         private Transform _transform;
         private Tween3f _tween;

@@ -21,7 +21,7 @@ namespace Smonch.CyclopsFramework
 {
     public class TweenMaterialVector : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + "TweenMaterialVector";
+        public const string Tag = TagPrefix_Cyclops + nameof(TweenMaterialVector);
 
         private Material _material;
         private int _propertyId;

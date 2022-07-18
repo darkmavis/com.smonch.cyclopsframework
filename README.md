@@ -2,23 +2,24 @@
 
 Cyclops Framework (for Unity) provides a tag-based approach to simplifying state management, asynchronous routines, messaging, and tweening.  It plays well with others, drops nicely into existing projects, and you can use as much or little of it as you like.
 
-But why?
+Cyclops Framework predates Unity style co-routines, Javascript promises, and the various async/await frameworks now found in numerous languages.  All of these frameworks were created to solve similar problems and each has its own strengths and weaknesses.
 
-Imagine that you have several coroutine sequences running in parallel and you don't know how long they'll take to complete.
+The name Cyclops is descriptive.  This framework was built to provide asynchronous cyclic operations... Cyclops.
 
-- What if you could tag these sequences and then stop or pause them by tag?
-- What if you wanted to insert cascading tags at various points in a sequence?
-- What if a sequence is shaped like a tree?
-- What if you could use as many tags as you like and decide which tags should cascade and which tags shouldn't?
-- What if your coroutines provided state management events such as OnEnter, OnExit, and OnUpdate?
-- What if these coroutines could repeat for a number of cycles and provide cycle specific events such as OnFirstFrame and OnLastFrame?
+- What if you could stop, pause, and message asynchronous sequences by tag?
+- What if you could insert cascading tags at arbitrary positions in a sequence?
+- Why pass tags or tokens manually when a framework could do it for you?
+- What if you had unlimited tags and could decide which tags should cascade and which tags shouldn't?
+- What if you need a sequence with the shape of a tree?
+- What if your async routines could provide state management support?
+- For asynchronous cyclic routines, OnEnter, OnFirstFrame, OnUpdate, OnLastFrame, and OnExit might be handy.
 - What if you could send messages by tag to anything you'd like, no receiver required?
 
 Cyclops Framework was built for these types of situations.
 Usage should lead to greater flexibility with less code written.
 
 This project dates back over a decade and was heavily inspired by [Cyclops Framework (for AS3)](https://github.com/darkmavis/CyclopsFramework)
-from the 2010-2012 Flash era.
+from the 2010-2012 Flash/AS3 era.  The AS3 framework was inspired by previous work dating back to 2007.
 
 # Installing Cyclops Framework
 
@@ -27,9 +28,9 @@ There are no install scripts and no unusual steps are required.
 
 # Using Cyclops Framework
 
-Please stay tuned!  This is an early release and example code will follow.  For the time being, there are a handful of smoke tests that could be used as a starting point, but it would be better to wait for purpose built examples.  While the code base currently provides some documention, it's incomplete and will be improved.
+Please stay tuned!  The framework is undergoing a large upgrade and refactoring.  Despite it's age, the Unity version of this framework was only previously released with Voxelform in 2011.  For the time being, there are a handful of smoke tests that could be used as a starting point, but it would be better to wait for purpose built examples.  While the code base currently provides some documention, it's incomplete and will be improved.
 
-That said, the AS3 version provides a decent overview even if it's not coming from a C# / Unity perspective.  If you're not familiar with AS3, it was an OOP form of JS used by Flash and could easily be confused with TypeScript.
+That said, the AS3 version provides a very nice overview even if your coming from a Unity/C# perspective.
 
 [Cyclops Framework (for AS3)](https://github.com/darkmavis/CyclopsFramework)
 
@@ -38,7 +39,8 @@ That said, the AS3 version provides a decent overview even if it's not coming fr
 
 This version of Cyclops Framework is compatible with the following versions of Unity:
 
-* 2021
+* 2022
+* 2021 LTS
 * 2020 LTS
 * 2019 LTS
 
@@ -55,6 +57,7 @@ The following table indicates the folder structure of the Cyclops Framework pack
 
 |Date|Reason|
 |---|---|
+|July 17, 2022|Updated description and compatibility details.
 |January 7, 2022|Updated Unity compatibility details after testing each version of Unity. Matches package version 0.2.1|
 |January 6, 2022|Added mention of potentially helpful AS3 documentation. Matches package version 0.1.1|
 |January 5, 2022|Document created. Matches package version 0.1.0|

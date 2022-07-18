@@ -18,7 +18,7 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsSleep:CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + "CyclopsSleep";
+        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsSleep);
 		
         private CyclopsSleep(double period)
             : base(period, 1, null, Tag)

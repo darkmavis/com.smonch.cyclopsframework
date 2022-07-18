@@ -16,22 +16,27 @@
 
 using System;
 using System.Collections.Generic;
+using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsState
     {
-        private Queue<CyclopsState> _substates = new Queue<CyclopsState>();
-        private List<CyclopsStateTransition> _transitions = new List<CyclopsStateTransition>();
-        
+        private Queue<CyclopsState> _substates;
+        private List<CyclopsStateTransition> _transitions;
+
         public bool IsActive { get; private set; }
         public bool IsFinished => !IsActive;
         public bool IsStopping { get; set; }
 
         public void Start()
         {
+            _substates = GenericPool<Queue<CyclopsState>>.Get();
+            _transitions = ListPool<CyclopsStateTransition>.Get();
+
             IsActive = true;
             IsStopping = false;
+
             OnEnter();
         }
 
@@ -43,17 +48,15 @@ namespace Smonch.CyclopsFramework
                 OnUpdate();
         }
 
-        public void Stop(Type callerType = null)
+        internal void StopImmediately()
         {
-            if (callerType == typeof(CyclopsStateMachine))
-            {
-                OnExit();
-                IsActive = false;
-            }
-            else
-            {
-                IsStopping = true;
-            }
+            OnExit();
+            IsActive = false;
+        }
+
+        public void Stop()
+        {
+            IsStopping = true;
         }
 
         public void AddSubstate(CyclopsState substate)
@@ -77,7 +80,7 @@ namespace Smonch.CyclopsFramework
 
             substate = null;
 
-            if (_substates.Count > 0)
+            if (_substates?.Count > 0)
             {
                 substate = _substates.Dequeue();
                 result = true;
@@ -107,5 +110,18 @@ namespace Smonch.CyclopsFramework
         protected virtual void OnUpdate() { }
         protected virtual void OnLayeredUpdate() { }
         protected virtual void OnExit() { }
+
+        internal void Dispose()
+        {
+            GenericPool<Queue<CyclopsState>>.Release(_substates);
+            _substates = null;
+
+            ListPool<CyclopsStateTransition>.Release(_transitions);
+            _transitions = null;
+
+            OnDisposed();
+        }
+
+        protected virtual void OnDisposed() { }
     }
 }

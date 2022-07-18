@@ -73,7 +73,7 @@ namespace Smonch.CyclopsFramework
         [TearDown]
         public void OnTeardown()
         {
-            Host.Dispose();
+            Host.Reset();
             Host = null;
         }
         
@@ -83,7 +83,7 @@ namespace Smonch.CyclopsFramework
         public void Nop_WithDefaultTag_ExistsOnNextFrame(
             [Values(MaxDeltaTime)] float deltaTime)
         {
-            Host.Nop();
+            Host.Next.Nop();
             Host.Update(deltaTime);
 
             Assert.NotZero(Host.Count(CyclopsCommon.Tag_Nop));
@@ -96,7 +96,7 @@ namespace Smonch.CyclopsFramework
             [Values(CyclopsCommon.Tag_Nop)] string tag,
             [Values(MaxDeltaTime)] float deltaTime)
         {
-            Host.Nop();
+            Host.Next.Nop();
             Host.Update(deltaTime);
 
             Assert.NotZero(Host.Count(tag));
@@ -109,7 +109,7 @@ namespace Smonch.CyclopsFramework
             [Values(ValidTag)] string tag,
             [Values(MaxDeltaTime)] float deltaTime)
         {
-            Host.Nop(tag: tag);
+            Host.Next.Nop(tag: tag);
             Host.Update(deltaTime);
 
             Assert.NotZero(Host.Count(tag));
@@ -125,7 +125,8 @@ namespace Smonch.CyclopsFramework
         {
             int x = 2;
 
-            Host.Loop(period: 0, cycles: 2, () => --x)
+            Host.Next
+                .Loop(period: 0, maxCycles: 2, () => --x)
                 .AddTag(tag);
 
             // Get this thing added at the end of this frame and ready for update on the next frame.
@@ -154,9 +155,11 @@ namespace Smonch.CyclopsFramework
             int x = 2;
             int y = cycles;
 
-            Host.Loop(period: 0, cycles: 2, () => --x)
+            Host.Next
+                .Loop(period: 0, maxCycles: 2, () => --x)
                 .AddTag(tag);
-            Host.Loop(period: 0, cycles: cycles, () => --y);
+
+            Host.Next.Loop(period: 0, maxCycles: cycles, () => --y);
 
             // Get these routines added at the end of this frame and ready for update on the next frame.
             Host.Update(deltaTime);
@@ -192,8 +195,8 @@ namespace Smonch.CyclopsFramework
         {
             int x = 2;
 
-            Host.Add(() => --x)
-                .Add(() => --x);
+            Host.Next.Add(() => --x)
+                .Next.Add(() => --x);
 
             Host.Update(deltaTime); // Added
             Host.Update(deltaTime); // --x == 1
@@ -250,7 +253,7 @@ namespace Smonch.CyclopsFramework
 
             material.SetColor(propertyId, toColor);
 
-            Host.Add(TweenMaterialColor.Instantiate(material, propertyId, fromColor, toColor, period: 1f, cycles: 1f));
+            Host.Next.Add(TweenMaterialColor.Instantiate(material, propertyId, fromColor, toColor, period: 1f, cycles: 1f));
             Host.Update(deltaTime);
 
             // TODO: Cook up a more robust solution for this.
@@ -450,7 +453,8 @@ namespace Smonch.CyclopsFramework
         {
             bool wasReceived = false;
 
-            Host.Listen(receiverTag, name, listenerTimeOut)
+            Host.Next
+                .Listen(receiverTag, name, listenerTimeOut)
                 .OnSuccess(inboundMessage => wasReceived = true);
 
             Host.Send(receiverTag, name, sender, data: null, stage);
@@ -474,10 +478,11 @@ namespace Smonch.CyclopsFramework
         {
             bool wasReceived = false;
 
-            Host.Listen(receiverTag, name, listenerTimeOut)
+            Host.Next
+                .Listen(receiverTag, name, listenerTimeOut)
                 .OnSuccess(inboundMessage => wasReceived = true);
 
-            Host.Add(() => Host.Send(receiverTag, name, sender, data: null, stage));
+            Host.Next.Add(() => Host.Send(receiverTag, name, sender, data: null, stage));
 
             Host.Update(deltaTime);
             Host.Update(deltaTime);

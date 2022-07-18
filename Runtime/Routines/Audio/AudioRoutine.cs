@@ -20,7 +20,7 @@ namespace Smonch.CyclopsFramework
 {
     public class AudioRoutine : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + "AudioRoutine";
+        public const string Tag = TagPrefix_Cyclops + nameof(AudioRoutine);
 
         private AudioSource _source;
         private bool _shouldRestoreAudioSourceSettings;

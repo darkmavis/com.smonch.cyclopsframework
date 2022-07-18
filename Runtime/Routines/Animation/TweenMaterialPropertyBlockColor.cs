@@ -21,7 +21,7 @@ namespace Smonch.CyclopsFramework
 {
     public class TweenMaterialPropertyBlockColor : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + "TweenMaterialPropertyBlockColor";
+        public const string Tag = TagPrefix_Cyclops + nameof(TweenMaterialPropertyBlockColor);
 
         private MaterialPropertyBlock _block;
         private int _propertyId;

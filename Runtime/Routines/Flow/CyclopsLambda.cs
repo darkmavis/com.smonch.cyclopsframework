@@ -20,7 +20,7 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsLambda : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + "CyclopsLambda";
+        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsLambda);
 		
 		private Action _f;
 
@@ -40,12 +40,12 @@ namespace Smonch.CyclopsFramework
             return result;
         }
 
-        public static CyclopsLambda Instantiate(double period, double cycles, Action f)
+        public static CyclopsLambda Instantiate(double period, double maxCycles, Action f)
         {
-            if (TryInstantiateFromPool(() => new CyclopsLambda(period, cycles, f), out var result))
+            if (TryInstantiateFromPool(() => new CyclopsLambda(period, maxCycles, f), out var result))
             {
                 result.Period = period;
-                result.MaxCycles = cycles;
+                result.MaxCycles = maxCycles;
 
                 result._f = f;
             }
@@ -58,7 +58,7 @@ namespace Smonch.CyclopsFramework
             _f = null;
         }
 
-        protected override void OnUpdate(float t)
+        protected override void OnFirstFrame()
         {
             _f();
         }

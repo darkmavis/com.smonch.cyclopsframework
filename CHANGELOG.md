@@ -1,4 +1,7 @@
 # Changelog
+## [0.6.0] - 2022-07-17
+- Heavily refactored everything relying on CyclopsCommon. CyclopsCommon may be on the way out.
+- Provided a foo.Next counterpart to match foo.Immediately.
 ## [0.5.0] - 2022-01-27
 - Added optional pooling functionality to CyclopsRoutine to reduce GC pressure.  It's there when you need it, easy to use, and will stay out of your way.  All built-in CyclopsRoutines use it.  In the case of multiple CyclopsEngine instances running on different threads, everything should remain thread-safe as well.  This isn't fully tested, but all existing test cases pass.  TODO: Although not required for most scenarios, providing adjustable maximum capacities for pooling and the ability to clear the pools will likely be a good thing for someone somewhere, so it's on the list.
 - Added several tweening helper structs to simplify the creation of tweening oriented CyclopsRoutines.

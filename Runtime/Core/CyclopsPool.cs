@@ -56,7 +56,7 @@ namespace Smonch.CyclopsFramework
                 bag = new ConcurrentBag<T>();
 
                 // Result is ignored because if it doesn't work, it's not a problem.
-                _table.TryAdd(typeof(TS), bag);
+                _ = _table.TryAdd(typeof(TS), bag);
             }
 
             // Note: This is not a guarantee that the bag was actually added to the dictionary and that's fine.

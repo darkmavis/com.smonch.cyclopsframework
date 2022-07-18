@@ -20,7 +20,7 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsWaitForMessage : CyclopsRoutine, ICyclopsMessageInterceptor
     {
-        public const string Tag = TagPrefix_Cyclops + "CyclopsWaitForMessage";
+        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsWaitForMessage);
 
         private string _messageName = null;
         private bool _timedOut = true;

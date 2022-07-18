@@ -16,24 +16,20 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using UnityEngine.Assertions;
+using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
 {
-    public abstract class CyclopsRoutine : CyclopsCommon, ICyclopsDisposable, ICyclopsPausable, ICyclopsTaggable
+    public abstract class CyclopsRoutine : CyclopsCommon, ICyclopsDisposable, ICyclopsPausable, ICyclopsTaggable, ICyclopsRoutineScheduler
     {
-        // These collections provide a way to ease up on allocations.
-        private static ConcurrentBag<List<string>> _tagCollectionPool = new ConcurrentBag<List<string>>();
-        private static ConcurrentBag<List<CyclopsRoutine>> _childRoutineCollectionPool = new ConcurrentBag<List<CyclopsRoutine>>();
-
         private static CyclopsPool<CyclopsRoutine> Pool { get; set; } = new CyclopsPool<CyclopsRoutine>();
-
+        
         private bool _canSyncAtStart;
         private bool _isPooled;
         private bool _isReadyToCallFirstFrameAgain;
         private bool _shouldStoppageCallLastFrame;
-        
+
         private string _initialTag = Tag_Undefined;
 
         private Func<CyclopsRoutine, bool> _stoppagePredicate;
@@ -46,7 +42,7 @@ namespace Smonch.CyclopsFramework
         /// This provides a way to gracefully handle failures such as timeouts when waiting for an event or polling for a particular state.
         /// </summary>
         private Action FailureHandler { get; set; }
-        
+
         internal int NestingDepth { get; set; }
 
         protected bool MustRecycleIfPooled { get; set; } = true;
@@ -59,27 +55,34 @@ namespace Smonch.CyclopsFramework
         public Func<bool> SkipPredicate { get; set; }
 
         public double Age { get; private set; }
-        
+
         public double Period { get; protected set; }
-        
+
         public double Cycle { get; private set; }
-        
+
         public double MaxCycles { get; protected set; }
-        
+
         public double Position { get => (((Age - Cycle) >= 1.0) ? 1.0 : (Age - Cycle)); }
-        
+
         public double Speed { get; set; } = 0d;
 
         // Pooled
-        public List<string> Tags { get; private set; }
+        public HashSet<string> Tags { get; private set; }
 
         // Pooled
         public List<CyclopsRoutine> Children { get; private set; }
-        
+
+        /// <summary>
+        /// This provides a reference to the CyclopsEngine host.
+        /// </summary>
+        internal CyclopsEngine Host { get; set; }
+
         public virtual bool IsPaused { get; set; } = false;
 
         public bool IsActive { get; private set; } = true;
-                
+
+        public CyclopsNext Next => CyclopsNext.Rent(this);
+
         public CyclopsRoutine(double period, double cycles, string tag)
         {
             Initialize(period, cycles, bias: null, tag);
@@ -94,23 +97,24 @@ namespace Smonch.CyclopsFramework
         /// TODO: Fully document CyclopsRoutine.
         /// </summary>
         /// <param name="period"></param>
-        /// <param name="cycles"></param>
+        /// <param name="maxCycles"></param>
         /// <param name="bias"></param>
         /// <param name="tag"></param>
-        protected void Initialize(double period, double cycles, Func<float, float> bias, string tag)
+        protected void Initialize(double period, double maxCycles, Func<float, float> bias, string tag)
         {
             Assert.IsTrue(ValidateTimingValueWhereZeroIsOk(period, out var reason), reason);
-            Assert.IsTrue(ValidateTimingValue(cycles, out reason), reason);
+            Assert.IsTrue(ValidateTimingValue(maxCycles, out reason), reason);
             Assert.IsTrue(ValidateTag(tag, out reason), reason);
 
             Context = this;
-            MaxCycles = cycles;
+            MaxCycles = maxCycles;
             Period = period;
             Speed = 1d;
 
             Bias = bias ?? CyclopsFramework.Bias.Linear;
 
-            InitializeCollections();
+            Children = ListPool<CyclopsRoutine>.Get();
+            Tags = HashSetPool<string>.Get();
 
             AddTag(tag ?? Tag_Undefined);
 
@@ -137,23 +141,6 @@ namespace Smonch.CyclopsFramework
             return wasFound;
         }
 
-        private void InitializeCollections()
-        {
-            if (_childRoutineCollectionPool.TryTake(out var children))
-                children.Clear();
-            else
-                children = new List<CyclopsRoutine>();
-
-            Children = children;
-
-            if (_tagCollectionPool.TryTake(out var tags))
-                tags.Clear();
-            else
-                tags = new List<string>();
-
-            Tags = tags;
-        }
-        
         void ICyclopsDisposable.Dispose()
         {
             Bias = null;
@@ -175,13 +162,8 @@ namespace Smonch.CyclopsFramework
             SkipPredicate = null;
             Speed = 1d;
 
-            Children.Clear();
-            _childRoutineCollectionPool.Add(Children);
-            Children = null;
-
-            Tags.Clear();
-            _tagCollectionPool.Add(Tags);
-            Tags = null;
+            ListPool<CyclopsRoutine>.Release(Children);
+            HashSetPool<string>.Release(Tags);
 
             if (_isPooled)
             {
@@ -191,8 +173,8 @@ namespace Smonch.CyclopsFramework
                 Pool.Release(this);
             }
         }
-        
-        public override T Add<T>(T routine)
+
+        T ICyclopsRoutineScheduler.Add<T>(T routine)
         {
             Assert.IsNotNull(routine);
             Children.Add(routine);
@@ -211,7 +193,7 @@ namespace Smonch.CyclopsFramework
 
             return this;
         }
-        
+
         public T ObtainReference<T>(out T self) where T : CyclopsRoutine
         {
             self = (T)this;
@@ -223,7 +205,7 @@ namespace Smonch.CyclopsFramework
         {
             Children?.Clear();
         }
-        
+
         public CyclopsRoutine Repeat(double cycles)
         {
             Assert.IsTrue(ValidateTimingValue(cycles, out var reason), reason);
@@ -236,6 +218,12 @@ namespace Smonch.CyclopsFramework
         {
             Cycle = 0d;
             Age = 0d;
+        }
+
+        public CyclopsRoutine SkipIf(Func<bool> predicate)
+        {
+            Context.SkipPredicate = predicate;
+            return Context;
         }
 
         public CyclopsRoutine StopWhen(Func<CyclopsRoutine, bool> predicate)
@@ -302,7 +290,7 @@ namespace Smonch.CyclopsFramework
                 IsActive = false;
             }
         }
-        
+
         internal void Update(float deltaTime)
         {
             // Not asserting deltaTime here.
@@ -327,7 +315,10 @@ namespace Smonch.CyclopsFramework
             }
 
             if (_isReadyToCallFirstFrameAgain)
+            {
                 OnFirstFrame();
+                _isReadyToCallFirstFrameAgain = false;
+            }
 
             // If period is 0 then age is naturally incremented.
             // Negative periods aren't valid.
@@ -343,7 +334,7 @@ namespace Smonch.CyclopsFramework
             }
 
             var t = (float)(Age - Cycle);
-            
+
             if (t <= 1f)
             {
                 OnUpdate((Bias == null) ? t : Bias(t));
