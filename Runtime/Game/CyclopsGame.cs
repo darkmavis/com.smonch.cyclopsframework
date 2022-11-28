@@ -74,7 +74,8 @@ namespace Smonch.CyclopsFramework
                 return;
 
             IsQuitting = true;
-            
+            Stop();
+
 #if UNITY_EDITOR
             EditorApplication.isPlaying = false;
 #else
