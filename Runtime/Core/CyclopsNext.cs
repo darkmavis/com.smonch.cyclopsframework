@@ -15,7 +15,6 @@
 // limitations under the License.
 
 using System;
-using System.Collections;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
@@ -53,17 +52,6 @@ namespace Smonch.CyclopsFramework
         {
             return (CyclopsLambda)Add(CyclopsLambda.Instantiate(f))
                 .AddTag(tag);
-        }
-
-        public CyclopsCoroutine Add(Func<IEnumerator> f)
-        {
-            return Add(CyclopsCoroutine.Instantiate(f));
-        }
-
-        public CyclopsCoroutine Add(string tag, Func<IEnumerator> f)
-        {
-            return (CyclopsCoroutine)(Add(CyclopsCoroutine.Instantiate(f))
-                .AddTag(tag));
         }
 
         public CyclopsRoutine Add(string tag, CyclopsRoutine routine)

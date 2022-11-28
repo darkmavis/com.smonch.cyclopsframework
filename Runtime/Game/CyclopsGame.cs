@@ -18,6 +18,10 @@ using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.LowLevel;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsGame
@@ -32,7 +36,7 @@ namespace Smonch.CyclopsFramework
         }
 
         protected CyclopsStateMachine StateMachine { get; private set; } = new CyclopsStateMachine();
-        public bool IsQuitting { get; protected set; }
+        public bool IsQuitting { get; private set; }
 
         public CyclopsGame() { }
 
@@ -60,6 +64,22 @@ namespace Smonch.CyclopsFramework
 
                 PlayerLoop.SetPlayerLoop(currentPlayerLoop);
             }
+
+            Application.exitCancellationToken.Register(callback: Quit, useSynchronizationContext: true);
+        }
+
+        public void Quit()
+        {
+            if (IsQuitting)
+                return;
+
+            IsQuitting = true;
+            
+#if UNITY_EDITOR
+            EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         public void Stop()
@@ -67,7 +87,9 @@ namespace Smonch.CyclopsFramework
             Assert.IsTrue((_isActive && Application.isPlaying)
                 || (_isUsingAutomaticUpdateMode && _isActive && !Application.isPlaying),
                 "Stop was already called and did not need to be called again.");
-            
+
+            StateMachine.ForceStop();
+
             _isActive = false;
 
             if (_isUsingAutomaticUpdateMode)

@@ -22,18 +22,19 @@ namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsState
     {
-        private Queue<CyclopsState> _substates;
         private List<CyclopsStateTransition> _transitions;
 
         public bool IsActive { get; private set; }
         public bool IsFinished => !IsActive;
         public bool IsStopping { get; set; }
 
+        public CyclopsState()
+        {
+            _transitions = ListPool<CyclopsStateTransition>.Get();
+        }
+
         public void Start()
         {
-            _substates = GenericPool<Queue<CyclopsState>>.Get();
-            _transitions = ListPool<CyclopsStateTransition>.Get();
-
             IsActive = true;
             IsStopping = false;
 
@@ -59,34 +60,14 @@ namespace Smonch.CyclopsFramework
             IsStopping = true;
         }
 
-        public void AddSubstate(CyclopsState substate)
-        {
-            _substates.Enqueue(substate);
-        }
-
         public void AddTransition(CyclopsStateTransition transition)
         {
             _transitions.Add(transition);
         }
 
-        public void AddTransition(CyclopsState target, Func<bool> condition)
+        public void AddTransition(CyclopsState target, Func<bool> predicate)
         {
-            AddTransition(new CyclopsStateTransition { Target = target, Condition = condition });
-        }
-
-        public bool TryGetSubstate(out CyclopsState substate)
-        {
-            bool result = false;
-
-            substate = null;
-
-            if (_substates?.Count > 0)
-            {
-                substate = _substates.Dequeue();
-                result = true;
-            }
-
-            return result;
+            AddTransition(new CyclopsStateTransition { Target = target, Condition = predicate });
         }
 
         public bool QueryTransitions(out CyclopsState nextState)
@@ -113,9 +94,6 @@ namespace Smonch.CyclopsFramework
 
         internal void Dispose()
         {
-            GenericPool<Queue<CyclopsState>>.Release(_substates);
-            _substates = null;
-
             ListPool<CyclopsStateTransition>.Release(_transitions);
             _transitions = null;
 

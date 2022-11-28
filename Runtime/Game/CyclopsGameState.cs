@@ -26,7 +26,7 @@ namespace Smonch.CyclopsFramework
 
         public sealed override void Update(bool isLayeredUpdate = false)
         {
-            base.Update();
+            base.Update(isLayeredUpdate);
             Engine.Update(DeltaTime);
         }
 

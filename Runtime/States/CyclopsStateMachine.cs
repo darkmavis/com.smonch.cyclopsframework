@@ -29,6 +29,8 @@ namespace Smonch.CyclopsFramework
             _stateStack.Push(state);
         }
 
+        public void ForceStop() => _stateStack.Peek()?.StopImmediately();
+
         public void Update()
         {
             if (_stateStack.Count == 0)
@@ -79,9 +81,6 @@ namespace Smonch.CyclopsFramework
 
                 if (nextState != null)
                     _stateStack.Push(nextState);
-
-                while (activeState.TryGetSubstate(out var substate))
-                    _stateStack.Push(substate);
             }
         }
     }
