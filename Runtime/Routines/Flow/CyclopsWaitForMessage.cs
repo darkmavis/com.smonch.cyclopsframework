@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,27 +27,11 @@ namespace Smonch.CyclopsFramework
 
         private Action<CyclopsMessage> SuccessHandler { get; set; }
 
-        private CyclopsWaitForMessage(string receiverTag, string messageName)
-            : base(double.MaxValue, 1, null, Tag)
-        {
-            AddTag(receiverTag);
-            _messageName = messageName;
-        }
-
-        private CyclopsWaitForMessage(string receiverTag, string messageName, double timeout, double cycles)
-            : base(timeout, cycles, null, Tag)
-        {
-            AddTag(receiverTag);
-            _messageName = messageName;
-        }
-
         public static CyclopsWaitForMessage Instantiate(string receiverTag, string messageName)
         {
-            if (TryInstantiateFromPool(() => new CyclopsWaitForMessage(receiverTag, messageName), out var result))
-            {
-                result._messageName = messageName;
-            }
+            var result = InstantiateFromPool<CyclopsWaitForMessage>(double.MaxValue, tag: Tag);
 
+            result._messageName = messageName;
             result.AddTag(receiverTag);
 
             return result;
@@ -55,14 +39,9 @@ namespace Smonch.CyclopsFramework
 
         public static CyclopsWaitForMessage Instantiate(string receiverTag, string messageName, double timeout, double cycles)
         {
-            if (TryInstantiateFromPool(() => new CyclopsWaitForMessage(receiverTag, messageName, timeout, cycles), out var result))
-            {
-                result.Period = timeout;
-                result.MaxCycles = cycles;
-
-                result._messageName = messageName;
-            }
-
+            var result = InstantiateFromPool<CyclopsWaitForMessage>(timeout, cycles, tag: Tag);
+            
+            result._messageName = messageName;
             result.AddTag(receiverTag);
 
             return result;

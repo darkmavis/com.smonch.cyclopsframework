@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System.Threading;
+
 namespace Smonch.CyclopsFramework
 {
 	public class CyclopsInterceptMessage : CyclopsRoutine, ICyclopsMessageInterceptor
@@ -24,21 +26,11 @@ namespace Smonch.CyclopsFramework
 		
 		private Fd _fd;
 		
-		private CyclopsInterceptMessage(double period, double cycles, Fd f)
-            : base(period, cycles, null, Tag)
-        {
-			_fd = f;
-        }
-
 		public static CyclopsInterceptMessage Instantiate(double period, double cycles, Fd f)
         {
-			if (TryInstantiateFromPool(() => new CyclopsInterceptMessage(period, cycles, f), out var result))
-			{
-				result.Period = period;
-				result.MaxCycles = cycles;
-
-				result._fd = f;
-			}
+            var result = InstantiateFromPool<CyclopsInterceptMessage>(period, cycles, tag: Tag);
+			
+			result._fd = f;
 
 			return result;
 		}

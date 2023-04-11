@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,27 +24,16 @@ namespace Smonch.CyclopsFramework
 
         private Action<float> _ft = null;
 
-        private CyclopsUpdate(
-            double period,
-            double cycles,
-            Func<float, float> bias,
-            Action<float> ft)
-            : base(period, cycles, bias, Tag) => _ft = ft;
-
         public static CyclopsUpdate Instantiate(
             double period,
             double cycles,
             Func<float, float> bias,
             Action<float> ft)
         {
-            if (TryInstantiateFromPool(() => new CyclopsUpdate(period, cycles, bias, ft), out var result))
-            {
-                result.Period = period;
-                result.MaxCycles = cycles;
-                result.Bias = bias;
-                result._ft = ft;
-            }
-
+            var result = InstantiateFromPool<CyclopsUpdate>(period, cycles, bias, Tag);
+            
+            result._ft = ft;
+            
             return result;
         }
 

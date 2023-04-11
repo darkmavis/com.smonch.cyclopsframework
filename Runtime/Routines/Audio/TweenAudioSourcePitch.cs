@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,37 +25,19 @@ namespace Smonch.CyclopsFramework
         private AudioSource _source;
         private Tween1f _tween;
 
-        public TweenAudioSourcePitch(
-            AudioSource source,
-            float? fromPitch,
-            float? toPitch,
-            float period = 0f,
-            float cycles = 1f,
-            System.Func<float, float> bias = null)
-            : base(period, cycles, bias, Tag)
-        {
-            _source = source;
-            _tween.SetFromTo(fromPitch, toPitch);
-        }
-
         public static TweenAudioSourcePitch Instantiate(
             AudioSource source,
             float? fromPitch,
             float? toPitch,
-            float period = 0f,
-            float cycles = 1f,
+            double period = 0,
+            double cycles = 1,
             System.Func<float, float> bias = null)
         {
-            if (TryInstantiateFromPool(() => new TweenAudioSourcePitch(source, fromPitch, toPitch, period, cycles, bias), out var result))
-            {
-                result.Period = period;
-                result.MaxCycles = cycles;
-                result.Bias = bias;
+            var result = InstantiateFromPool<TweenAudioSourcePitch>(period, cycles, bias, Tag);
 
-                result._source = source;
-                result._tween.SetFromTo(fromPitch, toPitch);
-            }
-
+            result._source = source;
+            result._tween.SetFromTo(fromPitch, toPitch);
+            
             return result;
         }
 

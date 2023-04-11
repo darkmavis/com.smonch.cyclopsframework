@@ -18,42 +18,32 @@ using UnityEngine;
 
 namespace Smonch.CyclopsFramework
 {
-    public class TweenAudioSourcePan : CyclopsRoutine
+    public class CyclopsAnimation : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(TweenAudioSourcePan);
+        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsAnimation);
 
-        private AudioSource _source;
-        private Tween1f _tween;
+        private GameObject _target;
+        private AnimationClip _clip;
 
-        public static TweenAudioSourcePan Instantiate(
-            AudioSource source,
-            float? fromPan,
-            float? toPan,
-            double period = 0,
-            double cycles = 1,
-            System.Func<float, float> bias = null)
+        public static CyclopsAnimation Instantiate(GameObject target, AnimationClip clip, float cycles = 1f)
         {
-            var result = InstantiateFromPool<TweenAudioSourcePan>(period, cycles, bias, Tag);
+            var result = InstantiateFromPool<CyclopsAnimation>(clip.length, cycles, bias:null, Tag);
 
-            result._source = source;
-            result._tween.SetFromTo(fromPan, toPan);
+            result._target = target;
+            result._clip = clip;
 
             return result;
         }
 
         protected override void OnRecycle()
         {
-            _source = null;
-            _tween.Reset();
-        }
-        protected override void OnEnter()
-        {
-            _tween.Fallback = _source.panStereo;
+            _target = null;
+            _clip = null;
         }
 
         protected override void OnUpdate(float t)
         {
-            _source.panStereo = _tween.Evaluate(t);
+            _clip.SampleAnimation(_target, _clip.length * t);
         }
     }
 }

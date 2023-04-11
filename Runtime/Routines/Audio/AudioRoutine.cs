@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,26 +37,6 @@ namespace Smonch.CyclopsFramework
         private AudioSettings _prevSettings;
         private AudioSettings _currSettings;
 
-        public AudioRoutine(
-            AudioSource source,
-            AudioClip clip = null,
-            float pitch = 1f,
-            float volume = 1f,
-            float panStereo = 0f,
-            Vector3? worldPosition = null,
-            double cycles = 1.0,
-            bool shouldRestoreAudioSourceSettings = true)
-            : base(clip.length / pitch, cycles, Tag)
-        {
-            _source = source;
-            _currSettings.clip = clip;
-            _currSettings.pitch = pitch;
-            _currSettings.volume = volume;
-            _currSettings.panStereo = panStereo;
-            _currSettings.worldPosition = worldPosition ?? source.transform.position;
-            _shouldRestoreAudioSourceSettings = shouldRestoreAudioSourceSettings;
-        }
-
         public static AudioRoutine Instantiate(
             AudioSource source,
             AudioClip clip = null,
@@ -64,22 +44,18 @@ namespace Smonch.CyclopsFramework
             float volume = 1f,
             float panStereo = 0f,
             Vector3? worldPosition = null,
-            double cycles = 1.0,
+            double cycles = 1f,
             bool shouldRestoreAudioSourceSettings = true)
         {
-            if (TryInstantiateFromPool(() => new AudioRoutine(source, clip, pitch, volume, panStereo, worldPosition, cycles, shouldRestoreAudioSourceSettings), out var result))
-            {
-                result.Period = clip.length / pitch;
-                result.MaxCycles = cycles;
+            var result = InstantiateFromPool<AudioRoutine>(clip.length / pitch, cycles, bias:null, Tag);
 
-                result._source = source;
-                result._currSettings.clip = clip;
-                result._currSettings.pitch = pitch;
-                result._currSettings.volume = volume;
-                result._currSettings.panStereo = panStereo;
-                result._currSettings.worldPosition = worldPosition ?? source.transform.position;
-                result._shouldRestoreAudioSourceSettings = shouldRestoreAudioSourceSettings;
-            }
+            result._source = source;
+            result._currSettings.clip = clip;
+            result._currSettings.pitch = pitch;
+            result._currSettings.volume = volume;
+            result._currSettings.panStereo = panStereo;
+            result._currSettings.worldPosition = worldPosition ?? source.transform.position;
+            result._shouldRestoreAudioSourceSettings = shouldRestoreAudioSourceSettings;
 
             return result;
         }
