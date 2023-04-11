@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,41 +27,21 @@ namespace Smonch.CyclopsFramework
         private int _propertyId;
         private Tween1f _tween;
 
-        private TweenMaterialPropertyBlockFloat(
-            MaterialPropertyBlock block,
-            int propertyId,
-            float? fromValue = null,
-            float? toValue = null,
-            float period = 0f,
-            float cycles = 1f,
-            Func<float, float> bias = null)
-            : base(period, cycles, bias, Tag)
-        {
-            _block = block;
-            _propertyId = propertyId;
-            _tween.SetFromTo(fromValue, toValue);
-        }
-
         public static TweenMaterialPropertyBlockFloat Instantiate(
             MaterialPropertyBlock block,
             int propertyId,
             float? fromValue = null,
             float? toValue = null,
-            float period = 0f,
-            float cycles = 1f,
+            double period = 0,
+            double cycles = 1,
             Func<float, float> bias = null)
         {
-            if (TryInstantiateFromPool(() => new TweenMaterialPropertyBlockFloat(block, propertyId, fromValue, toValue, period, cycles, bias), out var result))
-            {
-                result.Period = period;
-                result.MaxCycles = cycles;
-                result.Bias = bias;
+            var result = InstantiateFromPool<TweenMaterialPropertyBlockFloat>(period, cycles, bias, Tag);
 
-                result._block = block;
-                result._propertyId = propertyId;
-                result._tween.SetFromTo(fromValue, toValue);
-            }
-
+            result._block = block;
+            result._propertyId = propertyId;
+            result._tween.SetFromTo(fromValue, toValue);
+            
             return result;
         }
 

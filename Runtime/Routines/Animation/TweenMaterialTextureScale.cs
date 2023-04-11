@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,40 +27,20 @@ namespace Smonch.CyclopsFramework
         private int _nameId;
         private Tween2f _tween;
 
-        private TweenMaterialTextureScale(
-            Material material,
-            int nameId,
-            Vector2? fromUvScale = null,
-            Vector2? toUvScale = null,
-            float period = 0f,
-            float cycles = 1f,
-            Func<float, float> bias = null)
-            : base(period, cycles, bias, Tag)
-        {
-            _material = material;
-            _nameId = nameId;
-            _tween.SetFromTo(fromUvScale, toUvScale);
-        }
-
         public static TweenMaterialTextureScale Instantiate(
             Material material,
             int nameId,
             Vector2? fromUvScale = null,
             Vector2? toUvScale = null,
-            float period = 0f,
-            float cycles = 1f,
+            double period = 0,
+            double cycles = 1,
             Func<float, float> bias = null)
         {
-            if (TryInstantiateFromPool(() => new TweenMaterialTextureScale(material, nameId, fromUvScale, toUvScale, period, cycles, bias), out var result))
-            {
-                result.Period = period;
-                result.MaxCycles = cycles;
-                result.Bias = bias;
+            var result = InstantiateFromPool<TweenMaterialTextureScale>(period, cycles, bias, Tag);
 
-                result._material = material;
-                result._nameId = nameId;
-                result._tween.SetFromTo(fromUvScale, toUvScale);
-            }
+            result._material = material;
+            result._nameId = nameId;
+            result._tween.SetFromTo(fromUvScale, toUvScale);
 
             return result;
         }

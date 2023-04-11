@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,42 +22,7 @@ namespace Smonch.CyclopsFramework
     {
         public const string Tag = TagPrefix_Cyclops + nameof(CyclopsUpdate);
 
-        private Action _f = null;
-		private Action<float> _ft = null;
-
-        private CyclopsUpdate(
-            double period,
-            Action f)
-            : base(period, 1.0, null, Tag)
-        {
-            _f = f;
-        }
-
-        private CyclopsUpdate(
-            double period,
-            double cycles,
-            Func<float, float> bias,
-            Action<float> ft)
-            : base(period, cycles, bias, Tag)
-        {
-            _ft = ft;
-		}
-
-        public static CyclopsUpdate Instantiate(
-            double period,
-            Action f)
-        {
-            return new CyclopsUpdate(period, f);
-
-            //if (TryInstantiateFromPool(() => new CyclopsUpdate(period, f), out var result))
-            //{
-            //    result.Period = period;
-
-            //    result._f = f;
-            //}
-
-            //return result;
-        }
+        private Action<float> _ft = null;
 
         public static CyclopsUpdate Instantiate(
             double period,
@@ -65,36 +30,14 @@ namespace Smonch.CyclopsFramework
             Func<float, float> bias,
             Action<float> ft)
         {
-            return new CyclopsUpdate(period, cycles, bias, ft);
-
-            //if (TryInstantiateFromPool(() => new CyclopsUpdate(period, cycles, bias, ft), out var result))
-            //{
-            //    result.Period = period;
-            //    result.MaxCycles = cycles;
-            //    result.Bias = bias;
-
-            //    result._ft = ft;
-            //}
-
-            //return result;
+            var result = InstantiateFromPool<CyclopsUpdate>(period, cycles, bias, Tag);
+            
+            result._ft = ft;
+            
+            return result;
         }
 
-        protected override void OnRecycle()
-        {
-            _f = null;
-            _ft = null;
-        }
-
-        protected override void OnUpdate(float t)
-        {
-            if (_ft == null)
-            {
-                _f();
-            }
-            else
-            {
-                _ft(t);
-            }
-        }
+        protected override void OnRecycle() => _ft = null;
+        protected override void OnUpdate(float t) => _ft(t);
     }
 }

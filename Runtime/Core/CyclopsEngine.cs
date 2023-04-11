@@ -14,14 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System;
 using System.Collections.Generic;
+using UnityEditor.Build;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
 {
-    public sealed class CyclopsEngine : CyclopsCommon, ICyclopsRoutineScheduler
+    public sealed class CyclopsEngine : CyclopsCommon, ICyclopsRoutineScheduler, IDisposable
     {
         private Dictionary<string, HashSet<ICyclopsTaggable>> _registry;
         private Queue<ICyclopsTaggable> _additions;
@@ -33,9 +35,8 @@ namespace Smonch.CyclopsFramework
         private HashSet<string> _pausesRequested;
         private HashSet<string> _resumesRequested;
         private HashSet<string> _blocksRequested;
-        private HashSet<string> _autotags;
-        private Dictionary<string, int> _timers;
-        private List<float> _timerTimes;
+        private Dictionary<string, int> _timers; // <-- TODO: Timers doesn't belong here even though it replaces something that did.
+        private List<float> _timerTimes; // <-- TODO: Timers doesn't belong here even thought it replaces something that did.
         private bool _nextAdditionIsImmediate = false;
 
         public float DeltaTime { get; private set; }
@@ -68,21 +69,37 @@ namespace Smonch.CyclopsFramework
 
         public CyclopsEngine()
         {
-            const int initialCapacity = 256;
+            // Note: Internally, GenericPool (and who knows what else) uses RemoveAt within a List and it looks like a design flaw.
+            // It wastes a few cycles as a result, but should easily outperform memory allocation + GC hiccups.
+            // And who knows... by the time you're reading this, it might be fixed.
+            _registry = DictionaryPool<string, HashSet<ICyclopsTaggable>>.Get();
+            _routines = GenericPool<Queue<CyclopsRoutine>>.Get();
+            _finishedRoutines = GenericPool<Queue<CyclopsRoutine>>.Get();
+            _additions = GenericPool<Queue<ICyclopsTaggable>>.Get();
+            _removals = GenericPool<Queue<ICyclopsTaggable>>.Get();
+            _stopsRequested = GenericPool<Queue<CyclopsStopRoutineRequest>>.Get();
+            _messages = GenericPool<Queue<CyclopsMessage>>.Get();
+            _pausesRequested = HashSetPool<string>.Get();
+            _resumesRequested = HashSetPool<string>.Get();
+            _blocksRequested = HashSetPool<string>.Get();
+            _timers = DictionaryPool<string, int>.Get();
+            _timerTimes = ListPool<float>.Get();
+        }
 
-            _registry = new Dictionary<string, HashSet<ICyclopsTaggable>>(initialCapacity);
-            _routines = new Queue<CyclopsRoutine>(initialCapacity);
-            _finishedRoutines = new Queue<CyclopsRoutine>(initialCapacity);
-            _additions = new Queue<ICyclopsTaggable>(initialCapacity);
-            _removals = new Queue<ICyclopsTaggable>(initialCapacity);
-            _stopsRequested = new Queue<CyclopsStopRoutineRequest>(initialCapacity);
-            _messages = new Queue<CyclopsMessage>(initialCapacity);
-            _pausesRequested = new HashSet<string>();
-            _resumesRequested = new HashSet<string>();
-            _blocksRequested = new HashSet<string>();
-            _autotags = new HashSet<string>();
-            _timers = new Dictionary<string, int>(initialCapacity);
-            _timerTimes = new List<float>(initialCapacity);
+        public void Dispose()
+        {
+            DictionaryPool<string, HashSet<ICyclopsTaggable>>.Release(_registry);
+            GenericPool<Queue<CyclopsRoutine>>.Release(_routines);
+            GenericPool<Queue<CyclopsRoutine>>.Release(_finishedRoutines);
+            GenericPool<Queue<ICyclopsTaggable>>.Release(_additions);
+            GenericPool<Queue<ICyclopsTaggable>>.Release(_removals);
+            GenericPool<Queue<CyclopsStopRoutineRequest>>.Release(_stopsRequested);
+            GenericPool<Queue<CyclopsMessage>>.Release(_messages);
+            HashSetPool<string>.Release(_pausesRequested);
+            HashSetPool<string>.Release(_resumesRequested);
+            HashSetPool<string>.Release(_blocksRequested);
+            DictionaryPool<string, int>.Release(_timers);
+            ListPool<float>.Release(_timerTimes);
         }
 
         public void Reset()
@@ -102,7 +119,6 @@ namespace Smonch.CyclopsFramework
             _pausesRequested.Clear();
             _resumesRequested.Clear();
             _blocksRequested.Clear();
-            _autotags.Clear();
             _timers.Clear();
             _timerTimes.Clear();
 
@@ -347,7 +363,8 @@ namespace Smonch.CyclopsFramework
             if (sender == null)
                 sender = this;
 
-            var msg = new CyclopsMessage {
+            var msg = new CyclopsMessage
+            {
                 receiverTag = receiverTag,
                 name = name,
                 sender = sender,
@@ -583,6 +600,10 @@ namespace Smonch.CyclopsFramework
             _resumesRequested.Clear();
         }
 
+        // Q. Why aren't paused items removed from the update list for efficiency?
+        // A. It would cause non-deterministic reinsertion.
+        // Retaining initial order reduces complexity by removing the need to query state.
+        // Fragmentation makes a run and placeholder solution unlikely.
         private void ProcessPauseRequests()
         {
             foreach (string tag in _pausesRequested)
@@ -621,14 +642,21 @@ namespace Smonch.CyclopsFramework
             ProcessTimers(deltaTime);
             ProcessMessages(CyclopsMessage.DeliveryStage.BeforeRoutines);
             ProcessRoutines(deltaTime);
+            // Delivering messages immediately after all updates are processed is the default behavior.
+            // Messages aren't delivered during updates because that would introduce nondeterministic side effects.
+            // Using AfterRoutines will keep complexity down.
             ProcessMessages(CyclopsMessage.DeliveryStage.AfterRoutines);
+            // Stop, then remove, then add. Order matters.
             ProcessStopRequests();
             ProcessRemovals();
             ProcessAdditions();
             ProcessMessages(CyclopsMessage.DeliveryStage.SoonestPossible);
             // Pause and Resume act on new additions intentionally.
+            // Paused routines are NOT removed from the queue.
+            // See comments above ProcessPauseRequests() for an explanation.
             ProcessResumeRequests();
             ProcessPauseRequests();
+            // Clear blocking tags that were used to filter out additions that might have otherwise been added this frame.
             _blocksRequested.Clear();
         }
     }

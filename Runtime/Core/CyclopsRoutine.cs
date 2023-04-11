@@ -83,6 +83,11 @@ namespace Smonch.CyclopsFramework
 
         public CyclopsNext Next => CyclopsNext.Rent(this);
 
+        protected CyclopsRoutine()
+        {
+            Initialize(0, 1, null, Tag_All);
+        }
+
         public CyclopsRoutine(double period, double cycles, string tag)
         {
             Initialize(period, cycles, bias: null, tag);
@@ -124,6 +129,23 @@ namespace Smonch.CyclopsFramework
         private void Reinitialize()
         {
             Initialize(Period, MaxCycles, Bias, _initialTag);
+        }
+
+        protected static T InstantiateFromPool<T>(double period = 0d, double cycles = 1.0, Func<float, float> bias = null, string tag = null) where T : CyclopsRoutine, new()
+        {
+            if (Pool.Rent(() => new T(), out T result))
+                result.Reinitialize();
+
+            result.Period = period;
+            result.MaxCycles = cycles;
+            result.Bias = bias;
+
+            if (tag != null)
+                result.AddTag(tag);
+
+            result._isPooled = true;
+
+            return result;
         }
 
         protected static bool TryInstantiateFromPool<T>(Func<T> routineFactory, out T result) where T : CyclopsRoutine

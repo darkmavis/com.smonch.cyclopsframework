@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,60 +36,31 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         public bool IsCancellationRequested { get; private set; }
 
-        private CyclopsTask(Task task, CancellationTokenSource tokenSource)
-            : base(1f, 0f, null, Tag)
-        {
-            Assert.IsNotNull(task);
-            Assert.IsNotNull(tokenSource);
-
-            _tokenSource = tokenSource;
-        }
-
-        private CyclopsTask(Action<CyclopsTask> f)
-            : base(1f, 0f, null, Tag)
-        {
-            Assert.IsNotNull(f);
-
-            _f = f;
-        }
-
-        private CyclopsTask(double period, double cycles, Action<CyclopsTask> f)
-            : base(period, cycles, null, Tag)
-        {
-            Assert.IsNotNull(f);
-
-            _f = f;
-        }
-
         public static CyclopsTask Instantiate(Task task, CancellationTokenSource tokenSource)
         {
-            if (TryInstantiateFromPool(() => new CyclopsTask(task, tokenSource), out var result))
-            {
-                result._task = task;
-                result._tokenSource = tokenSource;
-            }
+            var result = InstantiateFromPool<CyclopsTask>(tag: Tag);
+
+            result._task = task;
+            result._tokenSource = tokenSource;
 
             return result;
         }
 
         public static CyclopsTask Instantiate(Action<CyclopsTask> f)
         {
-            if (TryInstantiateFromPool(() => new CyclopsTask(f), out var result))
-                result._f = f;
+            var result = InstantiateFromPool<CyclopsTask>(tag: Tag);
+            
+            result._f = f;
 
             return result;
         }
 
         public static CyclopsTask Instantiate(double period, double cycles, Action<CyclopsTask> f)
         {
-            if (TryInstantiateFromPool(() => new CyclopsTask(period, cycles, f), out var result))
-            {
-                result.Period = period;
-                result.MaxCycles = cycles;
+            var result = InstantiateFromPool<CyclopsTask>(period, cycles, tag: Tag);
 
-                result._f = f;
-            }
-
+            result._f = f;
+            
             return result;
         }
 

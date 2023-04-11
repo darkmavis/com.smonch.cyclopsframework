@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,19 +20,10 @@ namespace Smonch.CyclopsFramework
     {
         public const string Tag = Tag_Nop;
 
-        private CyclopsNop(double cycles)
-            : base(period: 0, cycles: 1, bias: null, tag: Tag)
-        {
-            // Pass
-        }
-
         public static CyclopsNop Instantiate(double cycles)
         {
-            if (TryInstantiateFromPool(() => new CyclopsNop(cycles), out var result))
-            {
-                result.MaxCycles = cycles;
-            }
-
+            var result = InstantiateFromPool<CyclopsNop>(period: 0, cycles, tag: Tag);
+            
             result.MustRecycleIfPooled = false;
 
             return result;

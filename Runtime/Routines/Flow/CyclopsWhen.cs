@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,22 +26,12 @@ namespace Smonch.CyclopsFramework
         private Action _g;
         private bool _wasSuccessful = false;
 		
-        private  CyclopsWhen(Func<bool> f, Action g = null, double timeout = double.MaxValue)
-            : base(timeout, 1f, null, Tag)
-        {
-            _f = f;
-			_g = g;
-        }
-
         public static CyclopsWhen Instantiate(Func<bool> f, Action g = null, double timeout = double.MaxValue)
         {
-            if (TryInstantiateFromPool(() => new CyclopsWhen(f, g, timeout), out var result))
-            {
-                result.Period = timeout;
+            var result = InstantiateFromPool<CyclopsWhen>(timeout, tag: Tag);
 
-                result._f = f;
-                result._g = g;
-            }
+            result._f = f;
+            result._g = g;
 
             return result;
         }

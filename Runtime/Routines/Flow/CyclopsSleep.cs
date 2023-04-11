@@ -1,6 +1,6 @@
 // Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,18 +20,9 @@ namespace Smonch.CyclopsFramework
     {
         public const string Tag = TagPrefix_Cyclops + nameof(CyclopsSleep);
 		
-        private CyclopsSleep(double period)
-            : base(period, 1, null, Tag)
-        {
-            // pass
-        }
-
         public static CyclopsSleep Instantiate(double period)
         {
-            if (TryInstantiateFromPool(() => new CyclopsSleep(period), out var result))
-            {
-                result.Period = period;
-            }
+            var result = InstantiateFromPool<CyclopsSleep>(period, tag: Tag);
 
             result.MustRecycleIfPooled = false;
 
