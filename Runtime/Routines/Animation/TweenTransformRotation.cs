@@ -21,8 +21,6 @@ namespace Smonch.CyclopsFramework
 {
     public class TweenTransformRotation : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(TweenTransformRotation);
-
         private Transform _transform;
         private TweenQs _tween;
 
@@ -34,7 +32,7 @@ namespace Smonch.CyclopsFramework
             double cycles = 1,
             Func<float, float> bias = null)
         {
-            var result = InstantiateFromPool<TweenTransformRotation>(period, cycles, bias, Tag);
+            var result = InstantiateFromPool<TweenTransformRotation>(period, cycles, bias);
             
             result._transform = transform;
             result._tween.SetFromTo(fromRotation, toRotation);

@@ -1,6 +1,6 @@
 // Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 using System;
 using System.Collections.Generic;
-using UnityEditor.Build;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Pool;
@@ -35,8 +34,7 @@ namespace Smonch.CyclopsFramework
         private HashSet<string> _pausesRequested;
         private HashSet<string> _resumesRequested;
         private HashSet<string> _blocksRequested;
-        private Dictionary<string, int> _timers; // <-- TODO: Timers doesn't belong here even though it replaces something that did.
-        private List<float> _timerTimes; // <-- TODO: Timers doesn't belong here even thought it replaces something that did.
+        private Dictionary<string, double> _timers;
         private bool _nextAdditionIsImmediate = false;
 
         public float DeltaTime { get; private set; }
@@ -82,8 +80,7 @@ namespace Smonch.CyclopsFramework
             _pausesRequested = HashSetPool<string>.Get();
             _resumesRequested = HashSetPool<string>.Get();
             _blocksRequested = HashSetPool<string>.Get();
-            _timers = DictionaryPool<string, int>.Get();
-            _timerTimes = ListPool<float>.Get();
+            _timers = DictionaryPool<string, double>.Get();
         }
 
         public void Dispose()
@@ -98,8 +95,7 @@ namespace Smonch.CyclopsFramework
             HashSetPool<string>.Release(_pausesRequested);
             HashSetPool<string>.Release(_resumesRequested);
             HashSetPool<string>.Release(_blocksRequested);
-            DictionaryPool<string, int>.Release(_timers);
-            ListPool<float>.Release(_timerTimes);
+            DictionaryPool<string, double>.Release(_timers);
         }
 
         public void Reset()
@@ -120,7 +116,6 @@ namespace Smonch.CyclopsFramework
             _resumesRequested.Clear();
             _blocksRequested.Clear();
             _timers.Clear();
-            _timerTimes.Clear();
 
             _nextAdditionIsImmediate = false;
 
@@ -133,7 +128,6 @@ namespace Smonch.CyclopsFramework
         {
             Assert.IsNotNull(routine);
 
-            routine.Tags.Add(Tag_All);
             routine.Host = this;
 
             if (_nextAdditionIsImmediate)
@@ -231,7 +225,7 @@ namespace Smonch.CyclopsFramework
         {
             Assert.IsTrue(ValidateTaggable(taggedObject, out var reason), reason);
 
-            foreach (var tag in taggedObject.Tags)
+            void AddToTaggables(string tag)
             {
                 if (_registry.TryGetValue(tag, out var taggables))
                 {
@@ -244,13 +238,18 @@ namespace Smonch.CyclopsFramework
                     _registry[tag] = taggables;
                 }
             }
+
+            AddToTaggables(Tag_All);
+
+            foreach (var tag in taggedObject.Tags)
+                AddToTaggables(tag);
         }
 
         private void Unregister(ICyclopsTaggable taggedObject)
         {
             Assert.IsTrue(ValidateTaggable(taggedObject, out var reason), reason);
 
-            foreach (var tag in taggedObject.Tags)
+            void RemoveFromTaggables(string tag)
             {
                 if (_registry.ContainsKey(tag))
                 {
@@ -265,6 +264,11 @@ namespace Smonch.CyclopsFramework
                     }
                 }
             }
+
+            RemoveFromTaggables(Tag_All);
+
+            foreach (var tag in taggedObject.Tags)
+                RemoveFromTaggables(tag);
         }
 
         public int Count(string tag)
@@ -323,34 +327,29 @@ namespace Smonch.CyclopsFramework
             }
         }
         
-        public bool TimerReady(float period, string tag, bool canRestart = false)
+        public bool TimerReady(double timeout, string tag, bool canRestart = false)
         {
-            Assert.IsTrue(ValidateTimingValue(period, out var reason), reason);
+            Assert.IsTrue(ValidateTimingValue(timeout, out var reason), reason);
             Assert.IsTrue(ValidateTag(tag, out reason), reason);
 
-            int index;
-
-            if (_timers.TryGetValue(tag, out index))
+            if (_timers.TryGetValue(tag, out double secondsRemaining))
             {
-                if (_timerTimes[index] <= 0f)
+                if (secondsRemaining <= 0d)
                 {
-                    _timerTimes[index] = period;
+                    _timers[tag] = timeout;
 
                     return true;
                 }
                 else if (canRestart)
                 {
-                    _timerTimes[index] = period;
+                    _timers[tag] = timeout;
                 }
 
                 return false;
             }
             else
             {
-                index = _timerTimes.Count;
-                _timerTimes.Add(period);
-
-                _timers[tag] = index;
+                _timers[tag] = timeout;
 
                 return true;
             }
@@ -459,6 +458,10 @@ namespace Smonch.CyclopsFramework
             for (int i = 0; i < _stopsRequested.Count; ++i)
             {
                 var request = _stopsRequested.Dequeue();
+
+                // When timers were implemented as CyclopsSleep routines, they were naturally removed as taggables in the registry.
+                // That is no longer the case, so we're handling removal manually.
+                _ = _timers.Remove(request.routineTag);
 
                 if (_registry.ContainsKey(request.routineTag))
                 {
@@ -615,19 +618,10 @@ namespace Smonch.CyclopsFramework
             _pausesRequested.Clear();
         }
 
-        private void ProcessTimers(float deltaTime)
+        private void ProcessTimers(double deltaTime)
         {
-            for (int i = 0; i < _timerTimes.Count; ++i)
-            {
-                float secondsRemaining = _timerTimes[i];
-
-                if (secondsRemaining > 0f)
-                {
-                    secondsRemaining -= deltaTime;
-                    secondsRemaining = Mathf.Max(0f, secondsRemaining);
-                    _timerTimes[i] = secondsRemaining;
-                }
-            }
+            foreach (string tag in _timers.Keys)
+                _timers[tag] = Math.Max(0d, _timers[tag] - deltaTime);
         }
 
         public void Update(float deltaTime)

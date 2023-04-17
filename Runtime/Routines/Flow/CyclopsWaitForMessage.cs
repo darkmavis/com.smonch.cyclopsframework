@@ -20,8 +20,6 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsWaitForMessage : CyclopsRoutine, ICyclopsMessageInterceptor
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsWaitForMessage);
-
         private string _messageName = null;
         private bool _timedOut = true;
 
@@ -29,7 +27,7 @@ namespace Smonch.CyclopsFramework
 
         public static CyclopsWaitForMessage Instantiate(string receiverTag, string messageName)
         {
-            var result = InstantiateFromPool<CyclopsWaitForMessage>(double.MaxValue, tag: Tag);
+            var result = InstantiateFromPool<CyclopsWaitForMessage>(double.MaxValue);
 
             result._messageName = messageName;
             result.AddTag(receiverTag);
@@ -39,7 +37,7 @@ namespace Smonch.CyclopsFramework
 
         public static CyclopsWaitForMessage Instantiate(string receiverTag, string messageName, double timeout, double cycles)
         {
-            var result = InstantiateFromPool<CyclopsWaitForMessage>(timeout, cycles, tag: Tag);
+            var result = InstantiateFromPool<CyclopsWaitForMessage>(timeout, cycles);
             
             result._messageName = messageName;
             result.AddTag(receiverTag);

@@ -20,8 +20,6 @@ namespace Smonch.CyclopsFramework
 {
     public class AudioRoutine : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(AudioRoutine);
-
         private AudioSource _source;
         private bool _shouldRestoreAudioSourceSettings;
 
@@ -47,7 +45,7 @@ namespace Smonch.CyclopsFramework
             double cycles = 1f,
             bool shouldRestoreAudioSourceSettings = true)
         {
-            var result = InstantiateFromPool<AudioRoutine>(clip.length / pitch, cycles, bias:null, Tag);
+            var result = InstantiateFromPool<AudioRoutine>(clip.length / pitch, cycles, bias:null);
 
             result._source = source;
             result._currSettings.clip = clip;

@@ -20,15 +20,13 @@ namespace Smonch.CyclopsFramework
 {
 	public class CyclopsInterceptMessage : CyclopsRoutine, ICyclopsMessageInterceptor
 	{
-		public static readonly string Tag = TagPrefix_Cyclops + nameof(CyclopsInterceptMessage);
-		
 		public delegate void Fd(CyclopsMessage msg);
 		
 		private Fd _fd;
 		
 		public static CyclopsInterceptMessage Instantiate(double period, double cycles, Fd f)
         {
-            var result = InstantiateFromPool<CyclopsInterceptMessage>(period, cycles, tag: Tag);
+            var result = InstantiateFromPool<CyclopsInterceptMessage>(period, cycles);
 			
 			result._fd = f;
 

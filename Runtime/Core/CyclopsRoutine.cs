@@ -1,6 +1,6 @@
 // Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,23 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using log4net.Util;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine.Assertions;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsRoutine : CyclopsCommon, ICyclopsDisposable, ICyclopsPausable, ICyclopsTaggable, ICyclopsRoutineScheduler
-    {
-        private static CyclopsPool<CyclopsRoutine> Pool { get; set; } = new CyclopsPool<CyclopsRoutine>();
+    {   
+        private static CyclopsPool<CyclopsRoutine> Pool { get; } = new CyclopsPool<CyclopsRoutine>();
         
         private bool _canSyncAtStart;
         private bool _isPooled;
         private bool _isReadyToCallFirstFrameAgain;
         private bool _shouldStoppageCallLastFrame;
-
-        private string _initialTag = Tag_Undefined;
 
         private Func<CyclopsRoutine, bool> _stoppagePredicate;
 
@@ -67,7 +68,7 @@ namespace Smonch.CyclopsFramework
         public double Speed { get; set; } = 0d;
 
         // Pooled
-        public HashSet<string> Tags { get; private set; }
+        public IEnumerable<string> Tags { get; private set; }
 
         // Pooled
         public List<CyclopsRoutine> Children { get; private set; }
@@ -85,17 +86,17 @@ namespace Smonch.CyclopsFramework
 
         protected CyclopsRoutine()
         {
-            Initialize(0, 1, null, Tag_All);
+            Initialize(0, 1, null);
         }
 
-        public CyclopsRoutine(double period, double cycles, string tag)
+        public CyclopsRoutine(double period, double cycles)
         {
-            Initialize(period, cycles, bias: null, tag);
+            Initialize(period, cycles, bias: null);
         }
 
-        public CyclopsRoutine(double period, double cycles, Func<float, float> bias, string tag)
+        public CyclopsRoutine(double period, double cycles, Func<float, float> bias)
         {
-            Initialize(period, cycles, bias, tag);
+            Initialize(period, cycles, bias);
         }
 
         /// <summary>
@@ -105,11 +106,10 @@ namespace Smonch.CyclopsFramework
         /// <param name="maxCycles"></param>
         /// <param name="bias"></param>
         /// <param name="tag"></param>
-        protected void Initialize(double period, double maxCycles, Func<float, float> bias, string tag)
+        protected void Initialize(double period, double maxCycles, Func<float, float> bias)
         {
             Assert.IsTrue(ValidateTimingValueWhereZeroIsOk(period, out var reason), reason);
             Assert.IsTrue(ValidateTimingValue(maxCycles, out reason), reason);
-            Assert.IsTrue(ValidateTag(tag, out reason), reason);
 
             Context = this;
             MaxCycles = maxCycles;
@@ -119,19 +119,15 @@ namespace Smonch.CyclopsFramework
             Bias = bias ?? CyclopsFramework.Bias.Linear;
 
             Children = ListPool<CyclopsRoutine>.Get();
-            Tags = HashSetPool<string>.Get();
-
-            AddTag(tag ?? Tag_Undefined);
-
-            _initialTag = tag;
+            Tags = Array.Empty<string>(); // zero alloc
         }
 
         private void Reinitialize()
         {
-            Initialize(Period, MaxCycles, Bias, _initialTag);
+            Initialize(Period, MaxCycles, Bias);
         }
 
-        protected static T InstantiateFromPool<T>(double period = 0d, double cycles = 1.0, Func<float, float> bias = null, string tag = null) where T : CyclopsRoutine, new()
+        protected static T InstantiateFromPool<T>(double period = 0d, double cycles = 1.0, Func<float, float> bias = null) where T : CyclopsRoutine, new()
         {
             if (Pool.Rent(() => new T(), out T result))
                 result.Reinitialize();
@@ -139,9 +135,6 @@ namespace Smonch.CyclopsFramework
             result.Period = period;
             result.MaxCycles = cycles;
             result.Bias = bias;
-
-            if (tag != null)
-                result.AddTag(tag);
 
             result._isPooled = true;
 
@@ -185,7 +178,9 @@ namespace Smonch.CyclopsFramework
             Speed = 1d;
 
             ListPool<CyclopsRoutine>.Release(Children);
-            HashSetPool<string>.Release(Tags);
+
+            if (Tags is HashSet<string>)
+                HashSetPool<string>.Release((HashSet<string>)Tags);
 
             if (_isPooled)
             {
@@ -208,10 +203,10 @@ namespace Smonch.CyclopsFramework
         {
             Assert.IsTrue(ValidateTag(tag, out var reason), reason);
 
-            if (string.IsNullOrWhiteSpace(tag))
-                tag = Tag_Undefined;
+            if (Tags is not HashSet<string>)
+                Tags = HashSetPool<string>.Get();
 
-            Tags.Add(tag);
+            (Tags as HashSet<string>).Add(tag);
 
             return this;
         }
