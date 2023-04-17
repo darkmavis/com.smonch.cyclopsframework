@@ -20,15 +20,13 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsWhen : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsWhen);
-
         private Func<bool> _f;
         private Action _g;
         private bool _wasSuccessful = false;
 		
         public static CyclopsWhen Instantiate(Func<bool> f, Action g = null, double timeout = double.MaxValue)
         {
-            var result = InstantiateFromPool<CyclopsWhen>(timeout, tag: Tag);
+            var result = InstantiateFromPool<CyclopsWhen>(timeout);
 
             result._f = f;
             result._g = g;

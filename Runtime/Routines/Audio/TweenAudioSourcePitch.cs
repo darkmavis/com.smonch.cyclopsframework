@@ -20,8 +20,6 @@ namespace Smonch.CyclopsFramework
 {
     public class TweenAudioSourcePitch : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(TweenAudioSourcePitch);
-
         private AudioSource _source;
         private Tween1f _tween;
 
@@ -33,7 +31,7 @@ namespace Smonch.CyclopsFramework
             double cycles = 1,
             System.Func<float, float> bias = null)
         {
-            var result = InstantiateFromPool<TweenAudioSourcePitch>(period, cycles, bias, Tag);
+            var result = InstantiateFromPool<TweenAudioSourcePitch>(period, cycles, bias);
 
             result._source = source;
             result._tween.SetFromTo(fromPitch, toPitch);

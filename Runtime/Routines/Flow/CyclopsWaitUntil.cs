@@ -20,14 +20,12 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsWaitUntil : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsWaitUntil);
-		
         private Func<bool> _f;
         private bool _wasSuccessful;
 
         public static CyclopsWaitUntil Instantiate(Func<bool> f)
         {
-            var result = InstantiateFromPool<CyclopsWaitUntil>(double.MaxValue, tag: Tag);
+            var result = InstantiateFromPool<CyclopsWaitUntil>(double.MaxValue);
             
             result._f = f;
             
@@ -36,7 +34,7 @@ namespace Smonch.CyclopsFramework
 
         public static CyclopsWaitUntil Instantiate(Func<bool> f, double timeout)
         {
-            var result = InstantiateFromPool<CyclopsWaitUntil>(timeout, tag: Tag);
+            var result = InstantiateFromPool<CyclopsWaitUntil>(timeout);
 
             result._f = f;
             

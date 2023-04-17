@@ -20,6 +20,6 @@ namespace Smonch.CyclopsFramework
 {
     public interface ICyclopsTaggable
     {
-        HashSet<string> Tags { get; }
+        IEnumerable<string> Tags { get; }
     }
 }

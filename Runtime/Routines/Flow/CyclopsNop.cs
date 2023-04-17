@@ -18,11 +18,9 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsNop : CyclopsRoutine
     {
-        public const string Tag = Tag_Nop;
-
         public static CyclopsNop Instantiate(double cycles)
         {
-            var result = InstantiateFromPool<CyclopsNop>(period: 0, cycles, tag: Tag);
+            var result = InstantiateFromPool<CyclopsNop>(period: 0, cycles);
             
             result.MustRecycleIfPooled = false;
 

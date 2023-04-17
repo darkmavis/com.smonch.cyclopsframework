@@ -19,15 +19,12 @@ using System;
 namespace Smonch.CyclopsFramework
 {
     public class CyclopsLambda : CyclopsRoutine
-    {
-        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsLambda);
-		
+    {	
 		private Action _f;
 
         public static CyclopsLambda Instantiate(Action f)
         {
-            var result = InstantiateFromPool<CyclopsLambda>(tag: Tag);
-
+            var result = InstantiateFromPool<CyclopsLambda>();
             result._f = f;
 
             return result;
@@ -35,8 +32,7 @@ namespace Smonch.CyclopsFramework
 
         public static CyclopsLambda Instantiate(double period, double maxCycles, Action f)
         {
-            var result = InstantiateFromPool<CyclopsLambda>(period, maxCycles, bias: null, tag: Tag);
-            
+            var result = InstantiateFromPool<CyclopsLambda>(period, maxCycles);
             result._f = f;
 
             return result;

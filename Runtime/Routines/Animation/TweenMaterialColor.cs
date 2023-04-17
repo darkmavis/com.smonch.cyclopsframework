@@ -21,8 +21,6 @@ namespace Smonch.CyclopsFramework
 {
     public class TweenMaterialColor : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(TweenMaterialColor);
-
         private Material _material;
         private int _propertyId;
         private Tween4c _tween;
@@ -36,7 +34,7 @@ namespace Smonch.CyclopsFramework
             double cycles = 1,
             Func<float, float> bias = null)
         {
-            var result = InstantiateFromPool<TweenMaterialColor>(period, cycles, bias, Tag);
+            var result = InstantiateFromPool<TweenMaterialColor>(period, cycles, bias);
 
             result._material = material;
             result._propertyId = propertyId;

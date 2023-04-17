@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,19 +20,10 @@ namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsCommon
     {
-        public const float MaxDeltaTime = .25f;
-        public const string MessagePrefix_Cyclops = "Cyclops";
-        public const string Message_Analytics = MessagePrefix_Cyclops + "Analytics";
-        public const string TagAttributeDelimiter = ":";
-        public const string TagPrefix_Attribute = "@";
-        public const string TagPrefix_Noncascading = "!";
-        public const string TagPrefix_Cyclops = "!cf.";
         public const string Tag_All = "*";
-        public const string Tag_Logging = TagPrefix_Cyclops + "Logging";
-        public const string Tag_Nop = TagPrefix_Cyclops + "Nop";
-        public const string Tag_Undefined = TagPrefix_Cyclops + "Undefined";
-        public const string Tag_Loop = TagPrefix_Cyclops + "Loop";
-        public const string Tag_LoopWhile = TagPrefix_Cyclops + "LoopWhile";
+        public const string Tag_Log = "Cyclops.Log";
+        public const string TagPrefix_Noncascading = "!";
+        public const float MaxDeltaTime = .25f;
         
         public CyclopsRoutine Context { get; protected set; }
         
@@ -149,12 +140,6 @@ namespace Smonch.CyclopsFramework
             if (o == null)
             {
                 reason = "ICyclopsTaggable.Tags must not be null.";
-                return false;
-            }
-
-            if (o.Tags.Count == 0)
-            {
-                reason = "ICyclopsTaggable.Tags must contain at least 1 tag.";
                 return false;
             }
 

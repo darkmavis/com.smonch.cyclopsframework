@@ -20,30 +20,57 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsAnimation : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsAnimation);
+        private Animation _animation;
+        private AnimationState _state;
 
-        private GameObject _target;
-        private AnimationClip _clip;
-
-        public static CyclopsAnimation Instantiate(GameObject target, AnimationClip clip, float cycles = 1f)
+        public override bool IsPaused
         {
-            var result = InstantiateFromPool<CyclopsAnimation>(clip.length, cycles, bias:null, Tag);
+            get => base.IsPaused;
+            set => _state.speed = (base.IsPaused = /* !cmp */ value) ? 0f : (float)Speed;
+        }
 
-            result._target = target;
-            result._clip = clip;
+        public static CyclopsAnimation Instantiate(GameObject target, Animation animation, string clipName = null, float cycles = 1f)
+        {
+            clipName ??= animation.clip.name;
+
+            var result = InstantiateFromPool<CyclopsAnimation>(animation[clipName].length, cycles, bias:null);
+
+            result._animation = animation;
+            result._state = animation[clipName];
 
             return result;
         }
 
         protected override void OnRecycle()
         {
-            _target = null;
-            _clip = null;
+            _animation = null;
+            _state = null;
+        }
+
+        protected override void OnFirstFrame()
+        {
+            _state.normalizedTime = 0f;
+            _animation.Stop(_state.name);
+            _animation.Play(_state.name);
         }
 
         protected override void OnUpdate(float t)
         {
-            _clip.SampleAnimation(_target, _clip.length * t);
+            _state.speed = (float)Speed;
+        }
+
+        protected override void OnLastFrame()
+        {
+            if (!Mathf.Approximately(1f, _state.normalizedTime))
+            {
+                _state.normalizedTime = 1f;
+                _animation.Sample();
+            }
+        }
+
+        protected override void OnExit()
+        {
+            _animation.Stop(_state.name);
         }
     }
 }

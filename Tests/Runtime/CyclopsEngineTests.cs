@@ -1,6 +1,6 @@
 // Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -83,20 +83,22 @@ namespace Smonch.CyclopsFramework
         public void Nop_WithDefaultTag_ExistsOnNextFrame(
             [Values(MaxDeltaTime)] float deltaTime)
         {
-            Host.Next.Nop();
+            string nopTag = nameof(CyclopsNop);
+
+            Host.Next.Nop(nopTag);
             Host.Update(deltaTime);
 
-            Assert.NotZero(Host.Count(CyclopsCommon.Tag_Nop));
+            Assert.NotZero(Host.Count(nopTag));
         }
 
         [Test]
         [Category("Smoke")]
         [Category("Tags")]
         public void Nop_WithDefaultTag_CountIsOneOnNextFrame(
-            [Values(CyclopsCommon.Tag_Nop)] string tag,
+            [Values(nameof(CyclopsNop))] string tag,
             [Values(MaxDeltaTime)] float deltaTime)
         {
-            Host.Next.Nop();
+            Host.Next.Nop(tag);
             Host.Update(deltaTime);
 
             Assert.NotZero(Host.Count(tag));

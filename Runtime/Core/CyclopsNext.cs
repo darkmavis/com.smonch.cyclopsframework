@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 // limitations under the License.
 
 using System;
+using System.Linq;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
@@ -61,16 +62,11 @@ namespace Smonch.CyclopsFramework
         }
 
         public CyclopsLambda Loop(Action f)
-        {
-            return (CyclopsLambda)Add(CyclopsLambda.Instantiate(period: 0f, maxCycles: float.MaxValue, f))
-                .AddTag(Tag_Loop);
-        }
+            => (CyclopsLambda)Add(CyclopsLambda.Instantiate(period: 0f, maxCycles: float.MaxValue, f));
+        
 
         public CyclopsLambda Loop(float period, float maxCycles, Action f)
-        {
-            return (CyclopsLambda)Add(CyclopsLambda.Instantiate(period, maxCycles, f))
-                .AddTag(Tag_Loop);
-        }
+            => (CyclopsLambda)Add(CyclopsLambda.Instantiate(period, maxCycles, f));
 
         public CyclopsLambda LoopWhile(Func<bool> predicate, float period = 0f)
         {
@@ -78,7 +74,7 @@ namespace Smonch.CyclopsFramework
             {
                 if (!predicate())
                     Context.Stop();
-            })).AddTag(Tag_LoopWhile);
+            }));
 
             return (CyclopsLambda)routine;
         }
@@ -98,7 +94,7 @@ namespace Smonch.CyclopsFramework
                 {
                     Context.Stop();
                 }
-            })).AddTag(Tag_LoopWhile);
+            }));
 
             return (CyclopsLambda)routine;
         }
@@ -115,48 +111,29 @@ namespace Smonch.CyclopsFramework
             return nop;
         }
 
-        public CyclopsSleep Sleep(float period, string tag = null)
-        {
-            if (tag == null)
-                return Add(CyclopsSleep.Instantiate(period));
-            else
-                return (CyclopsSleep)Add(CyclopsSleep.Instantiate(period)).AddTag(tag);
-        }
+        public CyclopsSleep Sleep(double period)
+            => Add(CyclopsSleep.Instantiate(period));
 
         public CyclopsWaitForMessage Listen(string receiverTag, string messageName)
-        {
-            return Add(CyclopsWaitForMessage.Instantiate(receiverTag, messageName));
-        }
+            => Add(CyclopsWaitForMessage.Instantiate(receiverTag, messageName));
 
-        public CyclopsWaitForMessage Listen(string receiverTag, string messageName, float timeout, float maxCycles = 1)
-        {
-            return Add(CyclopsWaitForMessage.Instantiate(receiverTag, messageName, timeout, maxCycles));
-        }
+        public CyclopsWaitForMessage Listen(string receiverTag, string messageName, double timeout, double maxCycles = 1)
+            => Add(CyclopsWaitForMessage.Instantiate(receiverTag, messageName, timeout, maxCycles));
 
         public CyclopsTask WaitForTask(Action<CyclopsTask> f)
-        {
-            return Add(CyclopsTask.Instantiate(f));
-        }
+            => Add(CyclopsTask.Instantiate(f));
 
         public CyclopsWaitUntil WaitUntil(Func<bool> condition)
-        {
-            return Add(CyclopsWaitUntil.Instantiate(condition));
-        }
+            => Add(CyclopsWaitUntil.Instantiate(condition));
 
-        public CyclopsWaitUntil WaitUntil(Func<bool> condition, float timeout)
-        {
-            return Add(CyclopsWaitUntil.Instantiate(condition, timeout));
-        }
+        public CyclopsWaitUntil WaitUntil(Func<bool> condition, double timeout)
+            => Add(CyclopsWaitUntil.Instantiate(condition, timeout));
 
-        public CyclopsWhen When(Func<bool> condition, Action response = null, float timeout = float.MaxValue)
-        {
-            return Add(CyclopsWhen.Instantiate(condition, response, timeout));
-        }
+        public CyclopsWhen When(Func<bool> condition, Action response = null, double timeout = double.MaxValue)
+            => Add(CyclopsWhen.Instantiate(condition, response, timeout));
 
-        public CyclopsUpdate Lerp(float period, float maxCycles, Action<float> f, Func<float, float> bias = null)
-        {
-            return Add(CyclopsUpdate.Instantiate(period, maxCycles, bias, f));
-        }
+        public CyclopsUpdate Lerp(double period, double maxCycles, Action<float> f, Func<float, float> bias = null)
+            => Add(CyclopsUpdate.Instantiate(period, maxCycles, bias, f));
 
         //public CyclopsWaitForMessage ProcessAnalytics(string tag, Action<CyclopsMessage> f, int maxCycles = 1, float timeout = float.MaxValue)
         //{
@@ -196,14 +173,14 @@ namespace Smonch.CyclopsFramework
             if (Logger == null)
             {
 #if (UNITY_EDITOR || DEVELOPMENT_BUILD)
-                return Add(tag: Tag_Logging, f: () => UnityEngine.Debug.Log(text));
+                return Add(tag: Tag_Log, f: () => UnityEngine.Debug.Log(text));
 #else
                 return Context;
 #endif
             }
             else
             {
-                return Add(tag: Tag_Logging, f: () => Logger?.Invoke(text));
+                return Add(tag: Tag_Log, f: () => Logger?.Invoke(text));
             }
         }
 
@@ -220,14 +197,14 @@ namespace Smonch.CyclopsFramework
             if (Logger == null)
             {
 #if (UNITY_EDITOR || DEVELOPMENT_BUILD)
-                return Add(tag: Tag_Logging, f: () => UnityEngine.Debug.Log(lazyPrinter()));
+                return Add(tag: Tag_Log, f: () => UnityEngine.Debug.Log(lazyPrinter()));
 #else
                 return Context;
 #endif
             }
             else
             {
-                return Add(tag: Tag_Logging, f: () => Logger?.Invoke(lazyPrinter()));
+                return Add(tag: Tag_Log, f: () => Logger?.Invoke(lazyPrinter()));
             }
         }
     }

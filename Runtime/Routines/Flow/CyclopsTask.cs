@@ -23,8 +23,6 @@ namespace Smonch.CyclopsFramework
 {
     public sealed class CyclopsTask : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsTask);
-        
         private Task _task;
         private CancellationTokenSource _tokenSource;
         private Action<CyclopsTask> _f;
@@ -38,7 +36,7 @@ namespace Smonch.CyclopsFramework
 
         public static CyclopsTask Instantiate(Task task, CancellationTokenSource tokenSource)
         {
-            var result = InstantiateFromPool<CyclopsTask>(tag: Tag);
+            var result = InstantiateFromPool<CyclopsTask>();
 
             result._task = task;
             result._tokenSource = tokenSource;
@@ -48,7 +46,7 @@ namespace Smonch.CyclopsFramework
 
         public static CyclopsTask Instantiate(Action<CyclopsTask> f)
         {
-            var result = InstantiateFromPool<CyclopsTask>(tag: Tag);
+            var result = InstantiateFromPool<CyclopsTask>();
             
             result._f = f;
 
@@ -57,7 +55,7 @@ namespace Smonch.CyclopsFramework
 
         public static CyclopsTask Instantiate(double period, double cycles, Action<CyclopsTask> f)
         {
-            var result = InstantiateFromPool<CyclopsTask>(period, cycles, tag: Tag);
+            var result = InstantiateFromPool<CyclopsTask>(period, cycles);
 
             result._f = f;
             

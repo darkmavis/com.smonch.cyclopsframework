@@ -18,11 +18,9 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsSleep:CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsSleep);
-		
         public static CyclopsSleep Instantiate(double period)
         {
-            var result = InstantiateFromPool<CyclopsSleep>(period, tag: Tag);
+            var result = InstantiateFromPool<CyclopsSleep>(period);
 
             result.MustRecycleIfPooled = false;
 

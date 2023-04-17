@@ -20,8 +20,6 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsUpdate : CyclopsRoutine
     {
-        public const string Tag = TagPrefix_Cyclops + nameof(CyclopsUpdate);
-
         private Action<float> _ft = null;
 
         public static CyclopsUpdate Instantiate(
@@ -30,7 +28,7 @@ namespace Smonch.CyclopsFramework
             Func<float, float> bias,
             Action<float> ft)
         {
-            var result = InstantiateFromPool<CyclopsUpdate>(period, cycles, bias, Tag);
+            var result = InstantiateFromPool<CyclopsUpdate>(period, cycles, bias);
             
             result._ft = ft;
             
