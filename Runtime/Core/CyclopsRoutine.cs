@@ -19,15 +19,20 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsRoutine : CyclopsCommon, ICyclopsDisposable, ICyclopsPausable, ICyclopsTaggable, ICyclopsRoutineScheduler
-    {   
-        private static CyclopsPool<CyclopsRoutine> Pool { get; } = new CyclopsPool<CyclopsRoutine>();
+    {
+        private static CyclopsPool<CyclopsRoutine> s_pool;
         
+        // This is important for in-editor situations where domain reloading is disabled.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void Init() => s_pool = new CyclopsPool<CyclopsRoutine>();
+
         private bool _canSyncAtStart;
         private bool _isPooled;
         private bool _isReadyToCallFirstFrameAgain;
@@ -129,7 +134,7 @@ namespace Smonch.CyclopsFramework
 
         protected static T InstantiateFromPool<T>(double period = 0d, double cycles = 1.0, Func<float, float> bias = null) where T : CyclopsRoutine, new()
         {
-            if (Pool.Rent(() => new T(), out T result))
+            if (s_pool.Rent(() => new T(), out T result))
                 result.Reinitialize();
 
             result.Period = period;
@@ -145,7 +150,7 @@ namespace Smonch.CyclopsFramework
         {
             bool wasFound = false;
 
-            if (Pool.Rent(routineFactory, out result))
+            if (s_pool.Rent(routineFactory, out result))
             {
                 wasFound = true;
                 result.Reinitialize();
@@ -187,7 +192,7 @@ namespace Smonch.CyclopsFramework
                 if (MustRecycleIfPooled)
                     OnRecycle();
 
-                Pool.Release(this);
+                s_pool.Release(this);
             }
         }
 

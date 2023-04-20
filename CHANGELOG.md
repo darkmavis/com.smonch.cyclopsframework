@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.1] - 2023-04-19
+
+- Added the missing 0.8.0 change log.
+- Fixed an issue with AnimationState in CyclopsAnimation where it was possible for AnimationState.speed to remain altered past its relationship with CyclopsAnimation.
+- Fixed a theorectical domain reloading issue with CyclopsRoutine's use of a static CyclopsPool. Even if domain reloading is disabled, the pool will still be properly reset.
+
+## [0.8.0] - 2023-04-16
+
+- Removed default tags despite a few benefits they provided for testing. Tags can be added as needed for testing. Debugging will likely be updated to provide a view of both tags and class names.
+- Simplified timers. They are now correctly removed when tag based removals are requested. This was past behavior that didn't make it into the new framework until just now.
+- TODO: Timers should be affected by pausing as well. They behaved as such before being special cased. They even took speed into account. Hmmm.
+
 ## [0.7.0] - 2023-04-10
 
 - Simplified: Removed constructors from all CyclopsRoutines in favor of using the public static Instantiate + InstantiateFromPool methods only.

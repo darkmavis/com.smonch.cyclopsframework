@@ -35,7 +35,7 @@ namespace Smonch.CyclopsFramework
             Manual
         }
 
-        protected CyclopsStateMachine StateMachine { get; private set; } = new CyclopsStateMachine();
+        protected CyclopsStateMachine StateMachine { get; } = new CyclopsStateMachine();
         public bool IsQuitting { get; private set; }
 
         public CyclopsGame() { }
