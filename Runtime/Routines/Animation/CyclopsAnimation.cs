@@ -23,6 +23,10 @@ namespace Smonch.CyclopsFramework
         private Animation _animation;
         private AnimationState _state;
 
+        // Note: Unlike an operation on a transform where the intended goal is to leave the transform in an altered state,
+        // it might be a bit of a surprise if a previously stopped animation were left with an altered speed for the next playback.
+        private float _originalSpeed;
+
         public override bool IsPaused
         {
             get => base.IsPaused;
@@ -37,6 +41,7 @@ namespace Smonch.CyclopsFramework
 
             result._animation = animation;
             result._state = animation[clipName];
+            result._originalSpeed = result._state.speed;
 
             return result;
         }
@@ -70,6 +75,7 @@ namespace Smonch.CyclopsFramework
 
         protected override void OnExit()
         {
+            _state.speed = _originalSpeed;
             _animation.Stop(_state.name);
         }
     }
