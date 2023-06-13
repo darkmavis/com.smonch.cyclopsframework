@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.2] - 2023-06-13
+
+- Fixed null context in CyclopsLambda.
+
 ## [0.8.1] - 2023-04-19
 
 - Added the missing 0.8.0 change log.
