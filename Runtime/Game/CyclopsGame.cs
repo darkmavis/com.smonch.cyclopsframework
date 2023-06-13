@@ -88,9 +88,9 @@ namespace Smonch.CyclopsFramework
             Assert.IsTrue((_isActive && Application.isPlaying)
                 || (_isUsingAutomaticUpdateMode && _isActive && !Application.isPlaying),
                 "Stop was already called and did not need to be called again.");
-
+            
             StateMachine.ForceStop();
-
+            
             _isActive = false;
 
             if (_isUsingAutomaticUpdateMode)
