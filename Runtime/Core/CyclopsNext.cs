@@ -15,7 +15,6 @@
 // limitations under the License.
 
 using System;
-using System.Linq;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
@@ -70,10 +69,12 @@ namespace Smonch.CyclopsFramework
 
         public CyclopsLambda LoopWhile(Func<bool> predicate, float period = 0f)
         {
-            var routine = Add(CyclopsLambda.Instantiate(period, float.MaxValue, () =>
+            CyclopsLambda context = null;
+            
+            var routine = context = Add(CyclopsLambda.Instantiate(period, float.MaxValue, () =>
             {
                 if (!predicate())
-                    Context.Stop();
+                    context!.Stop();
             }));
 
             return (CyclopsLambda)routine;
@@ -81,18 +82,20 @@ namespace Smonch.CyclopsFramework
 
         public CyclopsLambda LoopWhile(Func<bool> whilePredicate, Action whileBody, float period = 0f)
         {
-            var routine = Add(CyclopsLambda.Instantiate(period, float.MaxValue, () =>
+            CyclopsLambda context = null;
+            
+            var routine = context = Add(CyclopsLambda.Instantiate(period, float.MaxValue, () =>
             {
                 if (whilePredicate())
                 {
                     whileBody();
 
                     if (!whilePredicate())
-                        Context.Stop();
+                        context!.Stop();
                 }
                 else
                 {
-                    Context.Stop();
+                    context!.Stop();
                 }
             }));
 
