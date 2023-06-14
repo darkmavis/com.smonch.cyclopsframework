@@ -23,14 +23,21 @@ namespace Smonch.CyclopsFramework
     public abstract class CyclopsState
     {
         private List<CyclopsStateTransition> _transitions;
+        private readonly bool _usesPooledTransitions;
 
         public bool IsActive { get; private set; }
-        public bool IsFinished => !IsActive;
-        public bool IsStopping { get; set; }
+        public bool IsStopping { get; private set; }
 
         public CyclopsState()
         {
             _transitions = ListPool<CyclopsStateTransition>.Get();
+            _usesPooledTransitions = true;
+        }
+
+        public CyclopsState(List<CyclopsStateTransition> transitions)
+        {
+            _transitions = transitions;
+            _usesPooledTransitions = false;
         }
 
         public void Start()
@@ -94,9 +101,13 @@ namespace Smonch.CyclopsFramework
 
         internal void Dispose()
         {
-            ListPool<CyclopsStateTransition>.Release(_transitions);
-            _transitions = null;
+            if (_usesPooledTransitions)
+            {
+                ListPool<CyclopsStateTransition>.Release(_transitions);
+                _transitions = null;
+            }
 
+            IsStopping = false;
             OnDisposed();
         }
 
