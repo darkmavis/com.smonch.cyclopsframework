@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.3] - 2023-06-13
+
+- States can be properly re-used. A pooling change from last year undid that.
+
 ## [0.8.2] - 2023-06-13
 
 - Fixed null context in CyclopsLambda.
