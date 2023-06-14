@@ -20,7 +20,7 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsStateMachine
     {
-        private Stack<CyclopsState> _stateStack = new Stack<CyclopsState>();
+        private Stack<CyclopsState> _stateStack = new();
 
         public bool IsIdle { get; private set; }
 
