@@ -1,116 +1,59 @@
-﻿// Cyclops Framework
-// 
-// Copyright 2010 - 2022 Mark Davis
-// 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// 
-// http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 using System;
-using System.Collections.Generic;
-using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
 {
-    public abstract class CyclopsState
+    /// <summary>
+    /// <para><see cref="CyclopsState"/> operates as a state within a classic FSM until states are stacked.</para>
+    /// <para>If states are stacked, then <see cref="CyclopsState"/> operates as a state within a push-down automata.</para>
+    /// <para>For a comprehensive explanation of the state pattern and its relatives, please see:
+    /// https://gameprogrammingpatterns.com/state.html</para>
+    /// <seealso cref="CyclopsStateMachine"/>
+    /// </summary>
+    public class CyclopsState : CyclopsBaseState
     {
-        private List<CyclopsStateTransition> _transitions;
-        private readonly bool _usesPooledTransitions;
+        /// <summary>
+        /// <see cref="Entered"/> is invoked any time this state is entered.
+        /// A state can not be re-entered until it has exited.
+        /// <seealso cref="CyclopsStateMachine"/>
+        /// </summary>
+        public Action Entered { get; set; }
+        
+        /// <summary>
+        /// <see cref="Updating"/> is invoked when this state is the active state in the state machine's stack.
+        /// If this is the only state, then <see cref="Updating"/> will always be invoked.
+        /// <seealso cref="CyclopsStateMachine"/>
+        /// <seealso cref="LayeredUpdating"/>
+        /// </summary>
+        public Action Updating { get; set; }
+        
+        /// <summary>
+        /// <see cref="LayeredUpdating"/> is invoked when this state sits below other states in the state machine's stack.
+        /// If this is the only state, then <see cref="LayeredUpdating"/> will not invoked.
+        /// <para><br/>Tip: Keep it simple and only use <see cref="LayeredUpdating"/> when background operations are truly essential.
+        /// If this isn't the simplest long-term approach, then try something else.</para>
+        /// <seealso cref="CyclopsStateMachine"/>
+        /// <seealso cref="Updating"/>
+        /// </summary>
+        public Action LayeredUpdating { get; set;  }
+        
+        /// <summary>
+        /// <see cref="Exited"/> is invoked any time this state is exited.
+        /// A state can not be exited until after it is entered.
+        /// A state must be re-entered to exit again.
+        /// <seealso cref="CyclopsStateMachine"/>
+        /// </summary>
+        public Action Exited { get; set; }
+        
+        protected override void OnEnter()
+            => Entered?.Invoke();
 
-        public bool IsActive { get; private set; }
-        public bool IsStopping { get; private set; }
+        protected override void OnUpdate()
+            => Updating?.Invoke();
+        
+        protected override void OnLayeredUpdate()
+            => LayeredUpdating?.Invoke();
 
-        public CyclopsState()
-        {
-            _transitions = ListPool<CyclopsStateTransition>.Get();
-            _usesPooledTransitions = true;
-        }
-
-        public CyclopsState(List<CyclopsStateTransition> transitions)
-        {
-            _transitions = transitions;
-            _usesPooledTransitions = false;
-        }
-
-        public void Start()
-        {
-            IsActive = true;
-            IsStopping = false;
-
-            OnEnter();
-        }
-
-        public virtual void Update(bool isLayeredUpdate = false)
-        {
-            if (isLayeredUpdate)
-                OnLayeredUpdate();
-            else
-                OnUpdate();
-        }
-
-        internal void StopImmediately()
-        {
-            OnExit();
-            IsActive = false;
-        }
-
-        public void Stop()
-        {
-            IsStopping = true;
-        }
-
-        public void AddTransition(CyclopsStateTransition transition)
-        {
-            _transitions.Add(transition);
-        }
-
-        public void AddTransition(CyclopsState target, Func<bool> predicate)
-        {
-            AddTransition(new CyclopsStateTransition { Target = target, Condition = predicate });
-        }
-
-        public bool QueryTransitions(out CyclopsState nextState)
-        {
-            nextState = null;
-
-            foreach (var transition in _transitions)
-            {
-                if (transition.Condition())
-                {
-                    nextState = transition.Target;
-
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        protected virtual void OnEnter() { }
-        protected virtual void OnUpdate() { }
-        protected virtual void OnLayeredUpdate() { }
-        protected virtual void OnExit() { }
-
-        internal void Dispose()
-        {
-            if (_usesPooledTransitions)
-            {
-                ListPool<CyclopsStateTransition>.Release(_transitions);
-                _transitions = null;
-            }
-
-            IsStopping = false;
-            OnDisposed();
-        }
-
-        protected virtual void OnDisposed() { }
+        protected override void OnExit()
+            => Exited?.Invoke();
     }
 }

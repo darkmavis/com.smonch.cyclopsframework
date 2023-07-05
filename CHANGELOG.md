@@ -1,6 +1,11 @@
 # Changelog
 
-## [0.8.2] - 2023-06-13
+## [0.9.0] - 2023-07-04
+
+- All states can be properly re-used.
+- Fixed a few issues that were never encountered but could be.
+
+## [0.8.3] - 2023-06-13
 
 - States can be properly re-used. A pooling change from last year undid that.
 

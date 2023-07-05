@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,19 +19,20 @@ using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
 {
-    public abstract class CyclopsGameState : CyclopsState
+    public abstract class CyclopsGameState : CyclopsBaseState
     {
-        protected CyclopsEngine Engine { get; private set; } = GenericPool<CyclopsEngine>.Get();
+        protected CyclopsEngine Engine { get; } = GenericPool<CyclopsEngine>.Get();
         protected virtual float DeltaTime => Time.deltaTime;
-
-        public sealed override void Update(bool isLayeredUpdate = false)
+        
+        internal sealed override void Update(bool isLayeredUpdate = false)
         {
             base.Update(isLayeredUpdate);
             Engine.Update(DeltaTime);
         }
 
-        protected sealed override void OnDisposed()
+        protected override void Dispose(bool isDisposing)
         {
+            base.Dispose(isDisposing);
             Engine.Reset();
             GenericPool<CyclopsEngine>.Release(Engine);
         }
