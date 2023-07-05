@@ -58,7 +58,7 @@ namespace Smonch.CyclopsFramework
         }
 
         /// <summary>
-        /// <para>This limits the nesting depth of CyclopsRoutines that are immediately enqueued within a Cyclopsroutine that was itself enqueued on the same frame.</para>
+        /// <para>This limits the nesting depth of CyclopsRoutines that are immediately enqueued within a CyclopsRoutine that was itself enqueued on the same frame.</para>
         /// <para>While nesting is perfectly safe and predictable, it should still be considered the exception to the rule.</para>
         /// <para>Please use <see cref="Immediately"/> only when required. Failure to provide a limit combined with erroneous code could result in an endless loop.</para>
         /// <para>To enable nesting, raise MaxNestingDepth to a value greater than 1.</para>

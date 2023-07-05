@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ using UnityEditor;
 
 namespace Smonch.CyclopsFramework
 {
-    public abstract class CyclopsGame
+    public class CyclopsGame
     {
         private bool _isActive = false;
         private bool _isUsingAutomaticUpdateMode = false;
@@ -35,14 +35,14 @@ namespace Smonch.CyclopsFramework
             Manual
         }
 
-        protected CyclopsStateMachine StateMachine { get; } = new CyclopsStateMachine();
+        protected CyclopsStateMachine StateMachine { get; } = new();
         public bool IsQuitting { get; private set; }
 
         public CyclopsGame() { }
 
-        public void Start(CyclopsGameState initialState, UpdateMode updateMode)
+        public void Start(CyclopsBaseState initialState, UpdateMode updateMode)
         {
-            Assert.IsFalse(_isActive, "CyclopsGame was already started.");
+            Assert.IsFalse(_isActive, $"{nameof(CyclopsGame)} was already started.");
 
             if (_isActive)
                 return;
@@ -59,15 +59,20 @@ namespace Smonch.CyclopsFramework
                 var currentPlayerLoop = PlayerLoop.GetCurrentPlayerLoop();
 
                 for (int i = 0; i < currentPlayerLoop.subSystemList.Length; ++i)
+                {
                     if (currentPlayerLoop.subSystemList[i].type == typeof(UnityEngine.PlayerLoop.Update))
+                    {
                         currentPlayerLoop.subSystemList[i].updateDelegate = UpdateStateMachine;
-
+                        break;
+                    }
+                }
+                
                 PlayerLoop.SetPlayerLoop(currentPlayerLoop);
             }
-
+            
             Application.exitCancellationToken.Register(callback: Quit, useSynchronizationContext: true);
         }
-
+        
         public void Quit()
         {
             if (IsQuitting)
@@ -83,7 +88,7 @@ namespace Smonch.CyclopsFramework
 #endif
         }
 
-        public void Stop()
+        private void Stop()
         {
             Assert.IsTrue((_isActive && Application.isPlaying)
                 || (_isUsingAutomaticUpdateMode && _isActive && !Application.isPlaying),
@@ -92,17 +97,21 @@ namespace Smonch.CyclopsFramework
             StateMachine.ForceStop();
             
             _isActive = false;
-
+            
             if (_isUsingAutomaticUpdateMode)
             {
                 var currentPlayerLoop = PlayerLoop.GetCurrentPlayerLoop();
 
                 for (int i = 0; i < currentPlayerLoop.subSystemList.Length; ++i)
+                {
                     if (currentPlayerLoop.subSystemList[i].type == typeof(UnityEngine.PlayerLoop.Update))
+                    {
                         currentPlayerLoop.subSystemList[i].updateDelegate = null;
-
+                        break;
+                    }
+                }
+                
                 PlayerLoop.SetPlayerLoop(currentPlayerLoop);
-
                 _isUsingAutomaticUpdateMode = false;
             }
         }
@@ -117,7 +126,12 @@ namespace Smonch.CyclopsFramework
 
             UpdateStateMachine();
         }
-
+        
+        public void PushState(CyclopsBaseState state)
+        {
+            StateMachine.PushState(state);
+        }
+        
         private void UpdateStateMachine()
         {
             // Checking because this could continue to get called in the Editor even after play mode has ended.

@@ -21,6 +21,6 @@ namespace Smonch.CyclopsFramework
     public struct CyclopsStateTransition
     {
         public Func<bool> Condition { get; set; }
-        public CyclopsState Target { get; set; }
+        public CyclopsBaseState Target { get; set; }
     }
 }

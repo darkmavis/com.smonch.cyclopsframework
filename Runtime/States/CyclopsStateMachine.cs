@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2023 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,16 +20,20 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsStateMachine
     {
-        private Stack<CyclopsState> _stateStack = new();
+        private readonly Stack<CyclopsBaseState> _stateStack = new();
 
         public bool IsIdle { get; private set; }
 
-        public void PushState(CyclopsState state)
+        public void PushState(CyclopsBaseState baseState)
         {
-            _stateStack.Push(state);
+            _stateStack.Push(baseState);
         }
 
-        public void ForceStop() => _stateStack.Peek()?.StopImmediately();
+        public void ForceStop()
+        {
+            if (_stateStack.TryPeek(out var state))
+                state.StopImmediately();
+        }
 
         public void Update()
         {
@@ -54,7 +58,7 @@ namespace Smonch.CyclopsFramework
 
                 if (!activeState.IsActive)
                     activeState.Start();
-
+                
                 if (activeState.QueryTransitions(out var nextState))
                 {
                     activeState.Stop();
@@ -75,8 +79,6 @@ namespace Smonch.CyclopsFramework
                     // Still required? Check this.
                     if (nextState == null)
                         activeState.QueryTransitions(out nextState);
-
-                    activeState.Dispose();
                 }
 
                 if (nextState != null)
