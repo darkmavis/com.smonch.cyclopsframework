@@ -67,9 +67,11 @@ namespace Smonch.CyclopsFramework
         
         internal void StopImmediately()
         {
+            bool wasActive = IsActive;
+            
             IsActive = false;
             
-            if (IsActive)
+            if (wasActive)
                 OnExit();
         }
         
