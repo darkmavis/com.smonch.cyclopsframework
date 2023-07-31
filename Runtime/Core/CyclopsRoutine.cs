@@ -15,9 +15,7 @@
 // limitations under the License.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Pool;
@@ -47,7 +45,13 @@ namespace Smonch.CyclopsFramework
         /// This provides a way to gracefully handle failures such as timeouts when waiting for an event or polling for a particular state.
         /// </summary>
         private Action FailureHandler { get; set; }
-
+        
+        /// <summary>
+        /// This tracks the nesting depth of a CyclopsRoutine that is immediately enqueued.
+        /// It is used as a safety measure to prevent misuse and to warn developers of a potentially endless loop.
+        /// This situation can only be triggered by immediately adding a CyclopsRoutine.
+        /// Use of Next will never trigger this situation. Always use Next unless you know what you are doing.
+        /// </summary>
         internal int NestingDepth { get; set; }
 
         protected bool MustRecycleIfPooled { get; set; } = true;
@@ -69,7 +73,7 @@ namespace Smonch.CyclopsFramework
 
         public double Position { get => (((Age - Cycle) >= 1.0) ? 1.0 : (Age - Cycle)); }
 
-        public double Speed { get; set; } = 0d;
+        public double Speed { get; set; }
 
         // Pooled
         public IEnumerable<string> Tags { get; private set; }
@@ -82,37 +86,27 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         internal CyclopsEngine Host { get; set; }
 
-        public virtual bool IsPaused { get; set; } = false;
+        public virtual bool IsPaused { get; set; }
 
         public bool IsActive { get; private set; } = true;
 
         public CyclopsNext Next => CyclopsNext.Rent(this);
 
         protected CyclopsRoutine()
-        {
-            Initialize(0, 1, null);
-        }
+            => Initialize(0, 1, null);
 
-        public CyclopsRoutine(double period, double cycles)
-        {
-            Initialize(period, cycles, bias: null);
-        }
-
-        public CyclopsRoutine(double period, double cycles, Func<float, float> bias)
-        {
-            Initialize(period, cycles, bias);
-        }
-
+        public CyclopsRoutine(double period, double cycles, Func<float, float> bias = null)
+            => Initialize(period, cycles, bias);
+        
         /// <summary>
         /// TODO: Fully document CyclopsRoutine.
         /// </summary>
         /// <param name="period"></param>
         /// <param name="maxCycles"></param>
         /// <param name="bias"></param>
-        /// <param name="tag"></param>
         protected void Initialize(double period, double maxCycles, Func<float, float> bias)
         {
-            Assert.IsTrue(ValidateTimingValueWhereZeroIsOk(period, out var reason), reason);
+            Assert.IsTrue(ValidateTimingValueWhereZeroIsOk(period, out string reason), reason);
             Assert.IsTrue(ValidateTimingValue(maxCycles, out reason), reason);
 
             Context = this;
@@ -183,16 +177,16 @@ namespace Smonch.CyclopsFramework
 
             ListPool<CyclopsRoutine>.Release(Children);
 
-            if (Tags is HashSet<string>)
-                HashSetPool<string>.Release((HashSet<string>)Tags);
+            if (Tags is HashSet<string> tags)
+                HashSetPool<string>.Release(tags);
 
-            if (_isPooled)
-            {
-                if (MustRecycleIfPooled)
-                    OnRecycle();
+            if (!_isPooled)
+                return;
+            
+            if (MustRecycleIfPooled)
+                OnRecycle();
 
-                s_pool.Release(this);
-            }
+            s_pool.Release(this);
         }
 
         T ICyclopsRoutineScheduler.Add<T>(T routine)
@@ -205,12 +199,12 @@ namespace Smonch.CyclopsFramework
 
         public CyclopsRoutine AddTag(string tag)
         {
-            Assert.IsTrue(ValidateTag(tag, out var reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
 
             if (Tags is not HashSet<string>)
                 Tags = HashSetPool<string>.Get();
 
-            (Tags as HashSet<string>).Add(tag);
+            ((HashSet<string>)Tags).Add(tag);
 
             return this;
         }
@@ -299,14 +293,10 @@ namespace Smonch.CyclopsFramework
                 IsActive = false;
 
                 if (callLastFrame)
-                {
                     OnLastFrame();
-                }
 
                 if (callExit)
-                {
                     OnExit();
-                }
 
                 IsActive = false;
             }
@@ -326,7 +316,7 @@ namespace Smonch.CyclopsFramework
                 OnFirstFrame();
 
                 if (_canSyncAtStart)
-                    OnUpdate((Bias == null) ? 0f : Bias(0f));
+                    OnUpdate(Bias?.Invoke(0f) ?? 0f);
             }
 
             if (Age >= MaxCycles)
@@ -358,15 +348,15 @@ namespace Smonch.CyclopsFramework
 
             if (t <= 1f)
             {
-                OnUpdate((Bias == null) ? t : Bias(t));
+                OnUpdate(Bias?.Invoke(t) ?? t);
             }
             else if (Age >= MaxCycles)
             {
-                OnUpdate((Bias == null) ? 1f : Bias(1f));
+                OnUpdate(Bias?.Invoke(1f) ?? 1f);
             }
             else
             {
-                OnUpdate((Bias == null) ? t - 1f : Bias(t - 1f));
+                OnUpdate(Bias?.Invoke(t - 1f) ?? t - 1f);
             }
 
             // Cycle lags Age. This provides a way to know if OnLastFrame should be called.
@@ -393,16 +383,9 @@ namespace Smonch.CyclopsFramework
                     Stop(callLastFrame: true, callExit: true);
                 }
             }
-
-            if (_stoppagePredicate != null)
-            {
-                if (_stoppagePredicate(this))
-                {
-                    Stop(callLastFrame: _shouldStoppageCallLastFrame, callExit: false);
-                }
-            }
-
-            return;
+            
+            if (_stoppagePredicate?.Invoke(this) is not null)
+                Stop(callLastFrame: _shouldStoppageCallLastFrame, callExit: false);
         }
 
         protected virtual void OnEnter() { }

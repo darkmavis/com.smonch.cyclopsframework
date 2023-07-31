@@ -21,24 +21,25 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsPool<T> where T : class
     {
-        private ConcurrentDictionary<Type, ConcurrentBag<T>> _table;
+        private readonly ConcurrentDictionary<Type, ConcurrentBag<T>> _table;
 
         public CyclopsPool(int concurrencyLevel = 1, int initialCapacity = 256)
         {
             _table = new ConcurrentDictionary<Type, ConcurrentBag<T>>(concurrencyLevel, initialCapacity);
         }
-        
+
         /// <summary>
         /// <para>This provides a thread-safe way to instantiate and reuse pooled objects of a particular type.</para>
         /// </summary>
         /// <typeparam name="TS"></typeparam>
         /// <param name="valueFactory"></param>
+        /// <param name="result"></param>
         /// <returns></returns>
         public bool Rent<TS>(Func<TS> valueFactory, out TS result) where TS : T
         {
             bool wasFound = true;
 
-            if (!(_table.TryGetValue(typeof(TS), out var bag) && bag.TryTake(out var o)))
+            if (!(_table.TryGetValue(typeof(TS), out var bag) && bag.TryTake(out T o)))
             {
                 wasFound = false;
                 o = valueFactory();
