@@ -24,23 +24,24 @@ namespace Smonch.CyclopsFramework
 {
     public sealed class CyclopsEngine : CyclopsCommon, ICyclopsRoutineScheduler, IDisposable
     {
-        private Dictionary<string, HashSet<ICyclopsTaggable>> _registry;
-        private Queue<ICyclopsTaggable> _additions;
-        private Queue<ICyclopsTaggable> _removals;
+        private readonly Dictionary<string, HashSet<ICyclopsTaggable>> _registry;
+        private readonly Queue<ICyclopsTaggable> _additions;
+        private readonly Queue<ICyclopsTaggable> _removals;
         private Queue<CyclopsRoutine> _routines;
         private Queue<CyclopsRoutine> _finishedRoutines;
-        private Queue<CyclopsStopRoutineRequest> _stopsRequested;
-        private Queue<CyclopsMessage> _messages;
-        private HashSet<string> _pausesRequested;
-        private HashSet<string> _resumesRequested;
-        private HashSet<string> _blocksRequested;
-        private Dictionary<string, double> _timers;
-        private bool _nextAdditionIsImmediate = false;
+        private readonly Queue<CyclopsStopRoutineRequest> _stopsRequested;
+        private readonly Queue<CyclopsMessage> _messages;
+        private readonly HashSet<string> _pausesRequested;
+        private readonly HashSet<string> _resumesRequested;
+        private readonly HashSet<string> _blocksRequested;
+        private bool _nextAdditionIsImmediate;
 
         public float DeltaTime { get; private set; }
         public float Fps => Mathf.Round(1f / DeltaTime);
-
+        
+        [Obsolete("Use NextFrame for clarity.")]
         public CyclopsNext Next => CyclopsNext.Rent(this);
+        public CyclopsNext NextFrame => CyclopsNext.Rent(this);
 
         /// <summary>
         /// <para>Immediately allows a chained Add method (e.g. <see cref="Immediately"/>.Add(foo)) to be processed at the end of either the current or next ProcessRoutines call.</para>
@@ -56,7 +57,7 @@ namespace Smonch.CyclopsFramework
                 return Next;
             }
         }
-
+        
         /// <summary>
         /// <para>This limits the nesting depth of CyclopsRoutines that are immediately enqueued within a CyclopsRoutine that was itself enqueued on the same frame.</para>
         /// <para>While nesting is perfectly safe and predictable, it should still be considered the exception to the rule.</para>
@@ -80,7 +81,6 @@ namespace Smonch.CyclopsFramework
             _pausesRequested = HashSetPool<string>.Get();
             _resumesRequested = HashSetPool<string>.Get();
             _blocksRequested = HashSetPool<string>.Get();
-            _timers = DictionaryPool<string, double>.Get();
         }
 
         public void Dispose()
@@ -95,13 +95,12 @@ namespace Smonch.CyclopsFramework
             HashSetPool<string>.Release(_pausesRequested);
             HashSetPool<string>.Release(_resumesRequested);
             HashSetPool<string>.Release(_blocksRequested);
-            DictionaryPool<string, double>.Release(_timers);
         }
 
         public void Reset()
         {
-            Remove(Tag_All, true);
-            Block(Tag_All);
+            Remove(TagAll);
+            Block(TagAll);
             ProcessStopRequests();
             ProcessRemovals();
 
@@ -115,7 +114,6 @@ namespace Smonch.CyclopsFramework
             _pausesRequested.Clear();
             _resumesRequested.Clear();
             _blocksRequested.Clear();
-            _timers.Clear();
 
             _nextAdditionIsImmediate = false;
 
@@ -155,7 +153,7 @@ namespace Smonch.CyclopsFramework
 
         public void AddTaggable(ICyclopsTaggable o)
         {
-            Assert.IsTrue(ValidateTaggable(o, out var reason), reason);
+            Assert.IsTrue(ValidateTaggable(o, out string reason), reason);
             Register(o);
         }
 
@@ -163,58 +161,58 @@ namespace Smonch.CyclopsFramework
 
         public void Pause(string tag)
         {
-            Assert.IsTrue(ValidateTag(tag, out var reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
             _pausesRequested.Add(tag);
         }
 
         public void Pause(IEnumerable<string> tags)
         {
-            foreach (var tag in tags)
+            foreach (string tag in tags)
                 Pause(tag);
         }
 
         public void Resume(string tag)
         {
-            Assert.IsTrue(ValidateTag(tag, out var reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
             _resumesRequested.Add(tag);
         }
 
         public void Resume(IEnumerable<string> tags)
         {
-            foreach (var tag in tags)
+            foreach (string tag in tags)
                 Resume(tag);
         }
 
         public void Block(string tag)
         {
-            Assert.IsTrue(ValidateTag(tag, out var reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
             _blocksRequested.Add(tag);
         }
 
         public void Block(IEnumerable<string> tags)
         {
-            foreach (var tag in tags)
+            foreach (string tag in tags)
                 Block(tag);
         }
         
         public void Remove(string tag, bool willStopChildren = true)
         {
-            Assert.IsTrue(ValidateTag(tag, out var reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
             _stopsRequested.Enqueue(new CyclopsStopRoutineRequest(tag, willStopChildren));
         }
 
         public void Remove(IEnumerable<string> tags, bool willStopChildren = true)
         {
-            foreach (var tag in tags)
+            foreach (string tag in tags)
                 Remove(tag, willStopChildren);
         }
 
         public void Remove(ICyclopsTaggable taggedObject)
         {
-            Assert.IsTrue(ValidateTaggable(taggedObject, out var reason), reason);
+            Assert.IsTrue(ValidateTaggable(taggedObject, out string reason), reason);
             
-            if (taggedObject is CyclopsRoutine)
-                ((CyclopsRoutine)taggedObject).Stop();
+            if (taggedObject is CyclopsRoutine routine)
+                routine.Stop();
             else
                 _removals.Enqueue(taggedObject);
         }
@@ -223,7 +221,7 @@ namespace Smonch.CyclopsFramework
 
         private void Register(ICyclopsTaggable taggedObject)
         {
-            Assert.IsTrue(ValidateTaggable(taggedObject, out var reason), reason);
+            Assert.IsTrue(ValidateTaggable(taggedObject, out string reason), reason);
 
             void AddToTaggables(string tag)
             {
@@ -239,7 +237,7 @@ namespace Smonch.CyclopsFramework
                 }
             }
 
-            AddToTaggables(Tag_All);
+            AddToTaggables(TagAll);
 
             foreach (var tag in taggedObject.Tags)
                 AddToTaggables(tag);
@@ -247,33 +245,33 @@ namespace Smonch.CyclopsFramework
 
         private void Unregister(ICyclopsTaggable taggedObject)
         {
-            Assert.IsTrue(ValidateTaggable(taggedObject, out var reason), reason);
+            Assert.IsTrue(ValidateTaggable(taggedObject, out string reason), reason);
 
             void RemoveFromTaggables(string tag)
             {
-                if (_registry.ContainsKey(tag))
-                {
-                    var taggables = _registry[tag];
+                if (!_registry.ContainsKey(tag))
+                    return;
+                
+                var taggables = _registry[tag];
 
-                    taggables.Remove(taggedObject);
+                taggables.Remove(taggedObject);
 
-                    if (taggables.Count == 0)
-                    {
-                        HashSetPool<ICyclopsTaggable>.Release(taggables);
-                        _registry.Remove(tag);
-                    }
-                }
+                if (taggables.Count != 0)
+                    return;
+                
+                HashSetPool<ICyclopsTaggable>.Release(taggables);
+                _registry.Remove(tag);
             }
 
-            RemoveFromTaggables(Tag_All);
+            RemoveFromTaggables(TagAll);
 
-            foreach (var tag in taggedObject.Tags)
+            foreach (string tag in taggedObject.Tags)
                 RemoveFromTaggables(tag);
         }
 
         public int Count(string tag)
         {
-            Assert.IsTrue(ValidateTag(tag, out var reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
 
             int result = 0;
 
@@ -295,11 +293,11 @@ namespace Smonch.CyclopsFramework
         public void CopyTagStatusToList(List<CyclopsTagStatus> results)
         {
             results.Clear();
-
-            CyclopsTagStatus status;
-
-            foreach (var tag in _registry.Keys)
+            
+            foreach (string tag in _registry.Keys)
             {
+                CyclopsTagStatus status;
+                
                 status.tag = tag;
                 status.count = Count(tag);
 
@@ -313,7 +311,7 @@ namespace Smonch.CyclopsFramework
         /// <summary>
         /// For debugging purposes only.
         /// </summary>
-        /// <param name="results"></param>
+        /// <param name="result"></param>
         public void CopyRoutinesToList(List<CyclopsRoutine> result)
         {
             result.Clear();
@@ -327,40 +325,12 @@ namespace Smonch.CyclopsFramework
             }
         }
         
-        public bool TimerReady(double timeout, string tag, bool canRestart = false)
-        {
-            Assert.IsTrue(ValidateTimingValue(timeout, out var reason), reason);
-            Assert.IsTrue(ValidateTag(tag, out reason), reason);
-
-            if (_timers.TryGetValue(tag, out double secondsRemaining))
-            {
-                if (secondsRemaining <= 0d)
-                {
-                    _timers[tag] = timeout;
-
-                    return true;
-                }
-                else if (canRestart)
-                {
-                    _timers[tag] = timeout;
-                }
-
-                return false;
-            }
-            else
-            {
-                _timers[tag] = timeout;
-
-                return true;
-            }
-        }
-
         // Messaging
 
-        public void Send(string receiverTag, string name, object sender = null, object data = null, CyclopsMessage.DeliveryStage stage = CyclopsMessage.DeliveryStage.AfterRoutines)
+        public void Send(string receiverTag, string name, object sender = null, object data = null,
+            CyclopsMessage.DeliveryStage stage = CyclopsMessage.DeliveryStage.AfterRoutines)
         {
-            if (sender == null)
-                sender = this;
+            sender ??= this;
 
             var msg = new CyclopsMessage
             {
@@ -378,58 +348,41 @@ namespace Smonch.CyclopsFramework
         public void Send(CyclopsMessage msg)
         {
             Assert.IsNotNull(msg.sender, "Sender must not be null.");
-            Assert.IsTrue(ValidateTag(msg.receiverTag, out var reason), reason);
+            Assert.IsTrue(ValidateTag(msg.receiverTag, out string reason), reason);
 
             _messages.Enqueue(msg);
         }
 
-        private void DeliverMessage(CyclopsMessage msg, ICyclopsMessageInterceptor receiver)
-        {
-            receiver?.InterceptMessage(msg);
-        }
-
-        // TODO: This should live outside the engine.
-        //public void TrackAnalytics(string tag, float lingerPeriod = 0f)
-        //{
-        //    Assert.IsTrue(ValidateTag(tag, out var reason), reason);
-        //    Assert.IsTrue(ValidateTimingValue(lingerPeriod, out reason), reason);
-
-        //    Send(tag, Message_Analytics);
-
-        //    if (lingerPeriod > 0f)
-        //        Next.Sleep(tag: tag, period: lingerPeriod);
-        //}
-
+        private static void DeliverMessage(CyclopsMessage msg, ICyclopsMessageInterceptor receiver)
+            => receiver?.InterceptMessage(msg);
+        
         // Updates
 
         private void ProcessRoutines(float deltaTime)
         {
-            Assert.IsTrue(ValidateTimingValue(deltaTime, out var reason), reason);
+            Assert.IsTrue(ValidateTimingValue(deltaTime, out string reason), reason);
             
             while (_routines.Count > 0)
             {
-                var routine = _routines.Dequeue();
+                CyclopsRoutine routine = _routines.Dequeue();
                 
                 _finishedRoutines.Enqueue(routine);
 
                 // Note: If paused routines were removed from this list and added to a holding collection like say a HashSet,
                 // they'd typically lose their position in the queue when later resumed.  Deterministic ordering is a nice thing to have.
-                if (!routine.IsPaused)
-                {
-                    Context = routine;
-                    routine.Update(deltaTime);
+                if (routine.IsPaused)
+                    continue;
+                
+                Context = routine;
+                routine.Update(deltaTime);
 
-                    // The possibility of an infinite loop caused by nesting Immediately.Add() has passed
-                    // unless someone goes out of their way to modify NestingDepth... don't do that.
-                    routine.NestingDepth = 0;
-                }
+                // The possibility of an infinite loop caused by nesting Immediately.Add() has passed
+                // unless someone goes out of their way to modify NestingDepth... don't do that.
+                routine.NestingDepth = 0;
             }
 
             Context = null;
-
-            var tmp = _routines;
-            _routines = _finishedRoutines;
-            _finishedRoutines = tmp;
+            (_routines, _finishedRoutines) = (_finishedRoutines, _routines);
         }
 
         private void ProcessMessages(CyclopsMessage.DeliveryStage stage)
@@ -446,10 +399,14 @@ namespace Smonch.CyclopsFramework
                     continue;
                 }
 
-                if (_registry.TryGetValue(msg.receiverTag, out var taggables))
-                    foreach (var possibleReceiver in taggables)
-                        if (possibleReceiver is ICyclopsMessageInterceptor)
-                            DeliverMessage(msg, (ICyclopsMessageInterceptor)possibleReceiver);
+                if (!_registry.TryGetValue(msg.receiverTag, out var taggables))
+                    continue;
+                
+                foreach (ICyclopsTaggable possibleReceiver in taggables)
+                {
+                    if (possibleReceiver is ICyclopsMessageInterceptor receiver)
+                        DeliverMessage(msg, receiver);
+                }
             }
         }
 
@@ -457,27 +414,23 @@ namespace Smonch.CyclopsFramework
         {
             for (int i = 0; i < _stopsRequested.Count; ++i)
             {
-                var request = _stopsRequested.Dequeue();
-
-                // When timers were implemented as CyclopsSleep routines, they were naturally removed as taggables in the registry.
-                // That is no longer the case, so we're handling removal manually.
-                _ = _timers.Remove(request.routineTag);
-
-                if (_registry.ContainsKey(request.routineTag))
+                CyclopsStopRoutineRequest request = _stopsRequested.Dequeue();
+                
+                if (!_registry.ContainsKey(request.routineTag))
+                    continue;
+                
+                foreach (ICyclopsTaggable taggable in _registry[request.routineTag])
                 {
-                    foreach (var taggable in _registry[request.routineTag])
+                    if (taggable is CyclopsRoutine routine)
                     {
-                        if (taggable is CyclopsRoutine routine)
-                        {
-                            routine.Stop();
+                        routine.Stop();
                             
-                            if (request.stopChildren)
-                                routine.RemoveAllChildren();
-                        }
-                        else
-                        {
-                            Remove(taggable);
-                        }
+                        if (request.stopChildren)
+                            routine.RemoveAllChildren();
+                    }
+                    else
+                    {
+                        Remove(taggable);
                     }
                 }
             }
@@ -494,8 +447,8 @@ namespace Smonch.CyclopsFramework
 
                 Unregister(removal);
 
-                if (removal is ICyclopsDisposable)
-                    ((ICyclopsDisposable)removal).Dispose();
+                if (removal is ICyclopsDisposable disposable)
+                    disposable.Dispose();
             }
 
             // Process CyclopsRoutines removals here.
@@ -525,7 +478,7 @@ namespace Smonch.CyclopsFramework
                             if (!_blocksRequested.Overlaps(child.Tags))
                             {
                                 foreach (var tag in child.Tags)
-                                    if (!tag.StartsWith(TagPrefix_Noncascading))
+                                    if (!tag.StartsWith(TagPrefixNoncascading))
                                         child.AddTag(tag);
 
                                 scheduler.Add(child);
@@ -537,7 +490,7 @@ namespace Smonch.CyclopsFramework
                         foreach (var child in routine.Children)
                         {
                             foreach (var tag in child.Tags)
-                                if (!tag.StartsWith(TagPrefix_Noncascading))
+                                if (!tag.StartsWith(TagPrefixNoncascading))
                                     child.AddTag(tag);
 
                             scheduler.Add(child);
@@ -567,26 +520,26 @@ namespace Smonch.CyclopsFramework
 
                 foreach (string tag in additionCandidate.Tags)
                 {
-                    if (_blocksRequested.Contains(tag))
-                    {
-                        skipTag = true;
-                        break;
-                    }
+                    if (!_blocksRequested.Contains(tag))
+                        continue;
+                    
+                    skipTag = true;
+                    break;
                 }
 
                 if (skipTag)
                     return;
             }
 
-            if (additionCandidate is CyclopsRoutine)
+            if (additionCandidate is CyclopsRoutine addition)
             {
-                var skipPredicate = ((CyclopsRoutine)additionCandidate).SkipPredicate;
+                var skipPredicate = addition.SkipPredicate;
 
                 if (skipPredicate != null)
                     if (skipPredicate())
                         return;
 
-                _routines.Enqueue((CyclopsRoutine)additionCandidate);
+                _routines.Enqueue(addition);
             }
 
             Register(additionCandidate);
@@ -595,10 +548,10 @@ namespace Smonch.CyclopsFramework
         private void ProcessResumeRequests()
         {
             foreach (string tag in _resumesRequested)
-                if (_registry.ContainsKey(tag))
-                    foreach (var resumptionCandidate in _registry[tag])
-                        if (resumptionCandidate is ICyclopsPausable)
-                            ((ICyclopsPausable)resumptionCandidate).IsPaused = false;
+                if (_registry.TryGetValue(tag, out var resumptionCandidates))
+                    foreach (ICyclopsTaggable candidate in resumptionCandidates)
+                        if (candidate is ICyclopsPausable pausable)
+                            pausable.IsPaused = false;
 
             _resumesRequested.Clear();
         }
@@ -610,20 +563,14 @@ namespace Smonch.CyclopsFramework
         private void ProcessPauseRequests()
         {
             foreach (string tag in _pausesRequested)
-                if (_registry.ContainsKey(tag))
-                    foreach (ICyclopsTaggable pausationCandidate in _registry[tag])
-                        if (pausationCandidate is ICyclopsPausable)
-                            ((ICyclopsPausable)pausationCandidate).IsPaused = true;
+                if (_registry.TryGetValue(tag, out var pausationCandidates))
+                    foreach (ICyclopsTaggable candidate in pausationCandidates)
+                        if (candidate is ICyclopsPausable pausable)
+                            pausable.IsPaused = true;
 
             _pausesRequested.Clear();
         }
-
-        private void ProcessTimers(double deltaTime)
-        {
-            foreach (string tag in _timers.Keys)
-                _timers[tag] = Math.Max(0d, _timers[tag] - deltaTime);
-        }
-
+        
         public void Update(float deltaTime)
         {
             Assert.IsFalse(_nextAdditionIsImmediate, "CyclopsEngine should not currently be in immediate additions mode.  Add() should follow the use of Immediately.");
@@ -632,8 +579,7 @@ namespace Smonch.CyclopsFramework
             Assert.IsTrue(ValidateTimingValue(deltaTime, out var reason), reason);
             
             DeltaTime = Mathf.Clamp(deltaTime, float.Epsilon, MaxDeltaTime);
-
-            ProcessTimers(deltaTime);
+            
             ProcessMessages(CyclopsMessage.DeliveryStage.BeforeRoutines);
             ProcessRoutines(deltaTime);
             // Delivering messages immediately after all updates are processed is the default behavior.

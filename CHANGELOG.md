@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0] - 2023-08-27
+
+- Improved support for Unity subsystem events.
+- Replaced Engine.Next with Engine.NextFrame for clarity.
+- Removed possibility for double exit on app unload.
+- Simple code cleanup over multiple files.
+
 ## [0.9.0] - 2023-07-04
 
 - All states can be properly re-used.

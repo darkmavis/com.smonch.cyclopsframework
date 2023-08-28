@@ -20,14 +20,14 @@ namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsCommon
     {
-        public const string Tag_All = "*";
-        public const string Tag_Log = "Cyclops.Log";
-        public const string TagPrefix_Noncascading = "!";
+        public const string TagAll = "*";
+        public const string TagLog = "Cyclops.Log";
+        public const string TagPrefixNoncascading = "!";
         public const float MaxDeltaTime = .25f;
         
         public CyclopsRoutine Context { get; protected set; }
         
-        public static Action<string> Logger;
+        public static Action<string> Logger { get; set; }
 
         /// <summary>
         /// Validates that a Cyclops Framework tag is actually useful.
@@ -36,20 +36,16 @@ namespace Smonch.CyclopsFramework
         /// <param name="tag"></param>
         /// <param name="reason"></param>
         /// <returns>Returns false if validation fails, otherwise returns true.</returns>
-        protected bool ValidateTag(string tag, out string reason)
+        protected static bool ValidateTag(string tag, out string reason)
         {
-            reason = null;
+            reason = string.Empty;
 
-            if (string.IsNullOrWhiteSpace(tag))
-            {
-                if (tag == null)
-                    reason = "Tag is null.";
-                else
-                    reason = "A tag must contain a least one non-whitespace character.";
-                return false;
-            }
-
-            return true;
+            if (!string.IsNullOrWhiteSpace(tag))
+                return true;
+            
+            reason = tag is null ? "Tag is null." : "A tag must contain a least one non-whitespace character.";
+            
+            return false;
         }
 
         /// <summary>
@@ -58,37 +54,17 @@ namespace Smonch.CyclopsFramework
         /// <param name="timingValue"></param>
         /// <param name="reason"></param>
         /// <returns>Returns false if validation fails, otherwise returns true.</returns>
-        protected bool ValidateTimingValue(double timingValue, out string reason)
+        protected static bool ValidateTimingValue(double timingValue, out string reason)
         {
-            bool result;
+            if (!ValidateTimingValueWhereZeroIsOk(timingValue, out reason))
+                return false;
 
-            if (double.IsInfinity(timingValue))
-            {
-                reason = "Timing value must be a finite.";
-                result = false;
-            }
-            else if (double.IsNaN(timingValue))
-            {
-                reason = "Timing value must be a number.";
-                result = false;
-            }
-            else if (timingValue < 0d)
-            {
-                reason = "Timing value must be positive.";
-                result = false;
-            }
-            else if (timingValue == 0d)
-            {
-                reason = "Timing value must be greater than zero.";
-                result = false;
-            }
-            else
-            {
-                reason = null;
-                result = true;
-            }
-
-            return result;
+            if (timingValue != 0d)
+                return true;
+            
+            reason = "Timing value must be greater than zero.";
+            
+            return false;
         }
 
         /// <summary>
@@ -98,29 +74,28 @@ namespace Smonch.CyclopsFramework
         /// <param name="timingValue"></param>
         /// <param name="reason"></param>
         /// <returns>Returns false if validation fails, otherwise returns true.</returns>
-        protected bool ValidateTimingValueWhereZeroIsOk(double timingValue, out string reason)
+        protected static bool ValidateTimingValueWhereZeroIsOk(double timingValue, out string reason)
         {
             bool result;
-
-            if (double.IsInfinity(timingValue))
+            
+            switch (timingValue)
             {
-                reason = "Timing value must be a finite.";
-                result = false;
-            }
-            else if (double.IsNaN(timingValue))
-            {
-                reason = "Timing value must be a number.";
-                result = false;
-            }
-            else if (timingValue < 0d)
-            {
-                reason = "Timing value must be positive.";
-                result = false;
-            }
-            else
-            {
-                reason = null;
-                result = true;
+                case double.NegativeInfinity or double.PositiveInfinity:
+                    reason = "Timing value must be finite.";
+                    result = false;
+                    break;
+                case double.NaN:
+                    reason = "Timing value must be a number.";
+                    result = false;
+                    break;
+                case < 0d:
+                    reason = "Timing value must be positive.";
+                    result = false;
+                    break;
+                default:
+                    reason = null;
+                    result = true;
+                    break;
             }
 
             return result;
@@ -133,23 +108,23 @@ namespace Smonch.CyclopsFramework
         /// <param name="taggable"></param>
         /// <param name="reason"></param>
         /// <returns>Returns false if validation fails, otherwise returns true.</returns>
-        protected bool ValidateTaggable(ICyclopsTaggable o, out string reason)
+        protected static bool ValidateTaggable(ICyclopsTaggable taggable, out string reason)
         {
             reason = null;
 
-            if (o == null)
+            if (taggable == null)
             {
                 reason = "ICyclopsTaggable.Tags must not be null.";
                 return false;
             }
 
-            foreach (var tag in o.Tags)
+            foreach (string tag in taggable.Tags)
             {
-                if (string.IsNullOrWhiteSpace(tag))
-                {
-                    reason = $"Tags for {o.GetType()} can't be null and must contain non-whitespace characters.";
-                    return false;
-                }
+                if (!string.IsNullOrWhiteSpace(tag))
+                    continue;
+                
+                reason = $"Tags for {taggable.GetType()} can't be null and must contain non-whitespace characters.";
+                return false;
             }
 
             return true;
