@@ -38,8 +38,10 @@ namespace Smonch.CyclopsFramework
 
         public float DeltaTime { get; private set; }
         public float Fps => Mathf.Round(1f / DeltaTime);
-
+        
+        [Obsolete("Use NextFrame for clarity.")]
         public CyclopsNext Next => CyclopsNext.Rent(this);
+        public CyclopsNext NextFrame => CyclopsNext.Rent(this);
 
         /// <summary>
         /// <para>Immediately allows a chained Add method (e.g. <see cref="Immediately"/>.Add(foo)) to be processed at the end of either the current or next ProcessRoutines call.</para>
@@ -55,7 +57,7 @@ namespace Smonch.CyclopsFramework
                 return Next;
             }
         }
-
+        
         /// <summary>
         /// <para>This limits the nesting depth of CyclopsRoutines that are immediately enqueued within a CyclopsRoutine that was itself enqueued on the same frame.</para>
         /// <para>While nesting is perfectly safe and predictable, it should still be considered the exception to the rule.</para>
