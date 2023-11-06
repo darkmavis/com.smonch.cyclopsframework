@@ -33,8 +33,8 @@ namespace Smonch.CyclopsFramework
 
         public void ForceStop()
         {
-            if (_stateStack.TryPeek(out var state))
-                state.StopImmediately();
+            while (_stateStack.Count > 0)
+                _stateStack.Pop().StopImmediately();
         }
 
         public void Update(CyclopsGame.UpdateSystem updateSystem)
