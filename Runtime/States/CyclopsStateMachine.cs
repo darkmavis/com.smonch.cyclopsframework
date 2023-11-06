@@ -15,12 +15,14 @@
 // limitations under the License.
 
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Smonch.CyclopsFramework
 {
     public class CyclopsStateMachine
     {
         private readonly Stack<CyclopsBaseState> _stateStack = new();
+        private CyclopsBaseState _nextState;
 
         public bool IsIdle { get; private set; }
 
@@ -35,7 +37,7 @@ namespace Smonch.CyclopsFramework
                 state.StopImmediately();
         }
 
-        public void Update()
+        public void Update(CyclopsGame.UpdateSystem updateSystem)
         {
             if (_stateStack.Count == 0)
             {
@@ -45,44 +47,109 @@ namespace Smonch.CyclopsFramework
             {
                 IsIdle = false;
 
-                var activeState = _stateStack.Peek();
-
-                if (_stateStack.Count > 1)
+                CyclopsBaseState topState = _stateStack.Peek();
+                
+                if (updateSystem == CyclopsGame.UpdateSystem.CyclopsStateMachinePostUpdate)
                 {
-                    foreach (var state in _stateStack)
+                    if (topState.IsStopping)
                     {
-                        if (state != activeState)
+                        topState.StopImmediately();
+                        _stateStack.Pop();
+                        
+                        if (_nextState == null)
+                            topState.QueryTransitions(out _nextState);
+                    }
+
+                    if (_nextState != null)
+                        _stateStack.Push(_nextState);
+
+                    return;
+                }
+
+                foreach (CyclopsBaseState state in _stateStack)
+                {
+                    if (state == topState)
+                        continue;
+                    
+                    // In case of pushing multiple states onto the stack quickly.
+                    if (!state.IsActive)
+                        state.Start();
+                    
+                    switch (updateSystem)
+                    {
+                        case CyclopsGame.UpdateSystem.TimeUpdate:
+                            state.TimeUpdate(isLayeredUpdate: true);
+                            break;
+                        case CyclopsGame.UpdateSystem.InitializationUpdate:
+                            state.PlayerLoopInitialization(isLayeredUpdate: true);
+                            break;
+                        case CyclopsGame.UpdateSystem.EarlyUpdate:
+                            state.EarlyUpdate(isLayeredUpdate: true);
+                            break;
+                        case CyclopsGame.UpdateSystem.FixedUpdate:
+                            state.FixedUpdate(isLayeredUpdate: true);
+                            break;
+                        case CyclopsGame.UpdateSystem.PreUpdate:
+                            state.PreUpdate(isLayeredUpdate: true);
+                            break;
+                        case CyclopsGame.UpdateSystem.Update:
                             state.Update(isLayeredUpdate: true);
+                            break;
+                        case CyclopsGame.UpdateSystem.PreLateUpdate:
+                            state.PreLateUpdate(isLayeredUpdate: true);
+                            break;
+                        case CyclopsGame.UpdateSystem.PostLateUpdate:
+                            state.PostLateUpdate(isLayeredUpdate: true);
+                            break;
+                        default:
+                            Debug.LogWarning("Unexpected UpdateSystem encountered.");
+                            break;
                     }
                 }
 
-                if (!activeState.IsActive)
-                    activeState.Start();
+                if (!topState.IsActive)
+                    topState.Start();
                 
-                if (activeState.QueryTransitions(out var nextState))
+                if (topState.QueryTransitions(out _nextState))
                 {
-                    activeState.Stop();
+                    topState.Stop();
                 }
                 else
                 {
-                    activeState.Update();
+                    switch (updateSystem)
+                    {
+                        case CyclopsGame.UpdateSystem.InitializationUpdate:
+                            topState.PlayerLoopInitialization(isLayeredUpdate: false);
+                            break;
+                        case CyclopsGame.UpdateSystem.EarlyUpdate:
+                            topState.EarlyUpdate(isLayeredUpdate: false);
+                            break;
+                        case CyclopsGame.UpdateSystem.FixedUpdate:
+                            topState.FixedUpdate(isLayeredUpdate: false);
+                            break;
+                        case CyclopsGame.UpdateSystem.PreUpdate:
+                            topState.PreUpdate(isLayeredUpdate: false);
+                            break;
+                        case CyclopsGame.UpdateSystem.Update:
+                            topState.Update(isLayeredUpdate: false);
+                            break;
+                        case CyclopsGame.UpdateSystem.PreLateUpdate:
+                            topState.PreLateUpdate(isLayeredUpdate: false);
+                            break;
+                        case CyclopsGame.UpdateSystem.PostLateUpdate:
+                            topState.PostLateUpdate(isLayeredUpdate: false);
+                            break;
+                        case CyclopsGame.UpdateSystem.TimeUpdate:
+                            topState.TimeUpdate(isLayeredUpdate: false);
+                            break;
+                        default:
+                            Debug.LogWarning("Unexpected UpdateSystem encountered.");
+                            break;
+                    }
 
-                    if (activeState.QueryTransitions(out nextState))
-                        activeState.Stop();
+                    if (topState.QueryTransitions(out _nextState))
+                        topState.Stop();
                 }
-
-                if (activeState.IsStopping)
-                {
-                    activeState.StopImmediately();
-                    _stateStack.Pop();
-
-                    // Still required? Check this.
-                    if (nextState == null)
-                        activeState.QueryTransitions(out nextState);
-                }
-
-                if (nextState != null)
-                    _stateStack.Push(nextState);
             }
         }
     }

@@ -22,7 +22,7 @@ namespace Smonch.CyclopsFramework
     public class TweenTransformScale : CyclopsRoutine
     {
         private Transform _transform;
-        private Tween3f _tween;
+        private Tween3F _tween;
 
         public static TweenTransformScale Instantiate(
             Transform transform,

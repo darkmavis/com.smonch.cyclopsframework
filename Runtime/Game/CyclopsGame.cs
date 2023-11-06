@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.LowLevel;
+using UnityEngine.PlayerLoop;
 using Assert = UnityEngine.Assertions.Assert;
 
 #if UNITY_EDITOR
@@ -28,30 +29,39 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsGame
     {
-        private bool _isActive = false;
-        private bool _isUsingAutomaticUpdateMode = false;
+        private bool _isActive;
+        private bool _isUsingAutomaticUpdateMode;
         private PlayerLoopSystem _originalPlayerLoopSystem;
         private Vector2Int _screenSize;
 
         public enum UpdateMode
         {
             Automatic,
-            Manual
+            ManualLimited
         }
-
+        
+        public enum UpdateSystem
+        {
+            CyclopsStateMachinePostUpdate,
+            InitializationUpdate,
+            EarlyUpdate,
+            FixedUpdate,
+            PreUpdate,
+            Update,
+            PreLateUpdate,
+            PostLateUpdate,
+            TimeUpdate
+        }
+        
+        // ReSharper disable once MemberCanBePrivate.Global
         protected CyclopsStateMachine StateMachine { get; } = new();
+        // ReSharper disable once MemberCanBePrivate.Global
+        
         public bool IsQuitting { get; private set; }
 
-        public Action EarlyUpdateFinished { get; set; }
-        public Action FixedUpdateStarting { get; set; }
-        public Action FixedUpdateFinished { get; set; }
-        public Action LateUpdateStarting { get; set; }
-        public Action LateUpdateFinished { get; set; }
-        public Action ScreenSizeChanged { get; set; }
+        public event Action ScreenSizeChanged;
         
-        public CyclopsGame() { }
-
-        public void Start(CyclopsBaseState initialState, UpdateMode updateMode)
+        public void Start(CyclopsBaseState initialState, UpdateMode updateMode = UpdateMode.Automatic)
         {
             Assert.IsFalse(_isActive, $"{nameof(CyclopsGame)} was already started.");
 
@@ -62,81 +72,109 @@ namespace Smonch.CyclopsFramework
 
             if (updateMode == UpdateMode.Automatic)
                 _isUsingAutomaticUpdateMode = true;
-
+            
             _screenSize = new Vector2Int(Screen.width, Screen.height);
 
             StateMachine.PushState(initialState);
+
+            if (!_isUsingAutomaticUpdateMode)
+                return;
             
             _originalPlayerLoopSystem = PlayerLoop.GetCurrentPlayerLoop();
             
-            PlayerLoopSystem cyclopsLoopSystem = new PlayerLoopSystem
+            var cylopsInitialization = new PlayerLoopSystem
             {
                 type = typeof(CyclopsGame),
-                updateDelegate = UpdateStateMachine
+                updateDelegate = () => UpdateStateMachine(UpdateSystem.InitializationUpdate)
             };
             
-            PlayerLoopSystem earlyUpdateFinishedSystem = new PlayerLoopSystem
+            var cylopsEarlyUpdate = new PlayerLoopSystem
             {
                 type = typeof(CyclopsGame),
-                updateDelegate = () => EarlyUpdateFinished?.Invoke()
+                updateDelegate = () => UpdateStateMachine(UpdateSystem.EarlyUpdate)
             };
             
-            PlayerLoopSystem fixedUpdateStartingSystem = new PlayerLoopSystem
+            var cyclopsPreUpdate = new PlayerLoopSystem
             {
                 type = typeof(CyclopsGame),
-                updateDelegate = () => FixedUpdateStarting?.Invoke()
+                updateDelegate = () => UpdateStateMachine(UpdateSystem.PreUpdate)
             };
             
-            PlayerLoopSystem fixedUpdateFinishedSystem = new PlayerLoopSystem
+            var cyclopsUpdate = new PlayerLoopSystem
             {
                 type = typeof(CyclopsGame),
-                updateDelegate = () => FixedUpdateFinished?.Invoke()
+                updateDelegate = () => UpdateStateMachine(UpdateSystem.Update)
             };
             
-            PlayerLoopSystem lateUpdateStartingSystem = new PlayerLoopSystem
+            var cyclopsFixedUpdate = new PlayerLoopSystem
             {
                 type = typeof(CyclopsGame),
-                updateDelegate = () => LateUpdateStarting?.Invoke()
+                updateDelegate = () => UpdateStateMachine(UpdateSystem.FixedUpdate)
             };
             
-            PlayerLoopSystem lateUpdateFinishedSystem = new PlayerLoopSystem
+            var cyclopsPreLateUpdate = new PlayerLoopSystem
             {
                 type = typeof(CyclopsGame),
-                updateDelegate = () => LateUpdateFinished?.Invoke()
+                updateDelegate = () => UpdateStateMachine(UpdateSystem.PreLateUpdate)
             };
             
-            var currentPlayerLoop = PlayerLoop.GetCurrentPlayerLoop();
+            var cyclopsPostLateUpdate = new PlayerLoopSystem
+            {
+                type = typeof(CyclopsGame),
+                updateDelegate = () => UpdateStateMachine(UpdateSystem.PostLateUpdate)
+            };
+            
+            var cyclopsTimeUpdate = new PlayerLoopSystem
+            {
+                type = typeof(CyclopsGame),
+                updateDelegate = () => UpdateStateMachine(UpdateSystem.TimeUpdate)
+            };
+            
+            PlayerLoopSystem currentPlayerLoop = PlayerLoop.GetCurrentPlayerLoop();
             var existingSubsystems = currentPlayerLoop.subSystemList;
             var modifiedSubsystems = new List<PlayerLoopSystem>(existingSubsystems.Length + 1);
-
-            foreach (var subsystem in existingSubsystems)
+            
+            foreach (PlayerLoopSystem subsystem in existingSubsystems)
             {
-                // Run after PlayerLoop.Update completes each frame.
-                if (_isUsingAutomaticUpdateMode && (subsystem.type == typeof(UnityEngine.PlayerLoop.Update)))
+                if (subsystem.type == typeof(Initialization))
                 {
                     modifiedSubsystems.Add(subsystem);
-                    modifiedSubsystems.Add(cyclopsLoopSystem);
+                    modifiedSubsystems.Add(cylopsInitialization);
                 }
-                else if (subsystem.type == typeof(UnityEngine.PlayerLoop.EarlyUpdate))
+                else if (subsystem.type == typeof(EarlyUpdate))
                 {
                     modifiedSubsystems.Add(subsystem);
-                    modifiedSubsystems.Add(earlyUpdateFinishedSystem);
+                    modifiedSubsystems.Add(cylopsEarlyUpdate);
                 }
-                else if (subsystem.type == typeof(UnityEngine.PlayerLoop.FixedUpdate))
+                else if (subsystem.type == typeof(PreUpdate))
                 {
-                    modifiedSubsystems.Add(fixedUpdateStartingSystem);
                     modifiedSubsystems.Add(subsystem);
-                    modifiedSubsystems.Add(fixedUpdateFinishedSystem);
+                    modifiedSubsystems.Add(cyclopsPreUpdate);
                 }
-                else if (subsystem.type == typeof(UnityEngine.PlayerLoop.PreLateUpdate))
+                else if (subsystem.type == typeof(FixedUpdate))
                 {
                     modifiedSubsystems.Add(subsystem);
-                    modifiedSubsystems.Add(lateUpdateStartingSystem);
+                    modifiedSubsystems.Add(cyclopsFixedUpdate);
                 }
-                else if (subsystem.type == typeof(UnityEngine.PlayerLoop.PostLateUpdate))
+                else if (subsystem.type == typeof(Update))
                 {
-                    modifiedSubsystems.Add(lateUpdateFinishedSystem);
                     modifiedSubsystems.Add(subsystem);
+                    modifiedSubsystems.Add(cyclopsUpdate);
+                }
+                else if (subsystem.type == typeof(PreLateUpdate))
+                {
+                    modifiedSubsystems.Add(subsystem);
+                    modifiedSubsystems.Add(cyclopsPreLateUpdate);
+                }
+                else if (subsystem.type == typeof(PostLateUpdate))
+                {
+                    modifiedSubsystems.Add(subsystem);
+                    modifiedSubsystems.Add(cyclopsPostLateUpdate);
+                }
+                else if (subsystem.type == typeof(TimeUpdate))
+                {
+                    modifiedSubsystems.Add(subsystem);
+                    modifiedSubsystems.Add(cyclopsTimeUpdate);
                 }
                 else
                 {
@@ -150,6 +188,7 @@ namespace Smonch.CyclopsFramework
             Application.exitCancellationToken.Register(callback: Quit, useSynchronizationContext: true);
         }
         
+        // ReSharper disable once MemberCanBePrivate.Global
         public void Quit()
         {
             if (IsQuitting)
@@ -185,7 +224,7 @@ namespace Smonch.CyclopsFramework
             if (!_isActive)
                 return;
 
-            UpdateStateMachine();
+            UpdateStateMachine(UpdateSystem.Update);
         }
         
         public void PushState(CyclopsBaseState state)
@@ -193,26 +232,56 @@ namespace Smonch.CyclopsFramework
             StateMachine.PushState(state);
         }
         
-        private void UpdateStateMachine()
+        private void UpdateStateMachine(UpdateSystem updateSystem)
         {
             // Checking because this could continue to get called in the Editor even after play mode has ended.
             // Not a problem as long as we stop it here.
             if (!Application.isPlaying)
             {
                 Stop();
+                return;
             }
-            else
+            
+            switch (updateSystem)
             {
-                StateMachine.Update();
-                
-                // Unity will not notify on screen size changes. This is useful enough to handle here.
-                var currentScreenSize = new Vector2Int(Screen.width, Screen.height);
+                case UpdateSystem.TimeUpdate:
+                    StateMachine.Update(UpdateSystem.TimeUpdate);
+                    break;
+                case UpdateSystem.InitializationUpdate:
+                    StateMachine.Update(UpdateSystem.InitializationUpdate);
+                    break;
+                case UpdateSystem.EarlyUpdate:
+                    StateMachine.Update(UpdateSystem.EarlyUpdate);
+                    break;
+                case UpdateSystem.FixedUpdate:
+                    StateMachine.Update(UpdateSystem.FixedUpdate);
+                    break;
+                case UpdateSystem.PreUpdate:
+                    StateMachine.Update(UpdateSystem.PreUpdate);
+                    break;
+                case UpdateSystem.Update:
+                    // Unity will not notify on screen size changes. This is useful enough to handle here.
+                    var currentScreenSize = new Vector2Int(Screen.width, Screen.height);
 
-                if (currentScreenSize != _screenSize)
-                {
-                    _screenSize = currentScreenSize;
-                    ScreenSizeChanged?.Invoke();
-                }
+                    if (currentScreenSize == _screenSize)
+                    {
+                        _screenSize = currentScreenSize;
+                        ScreenSizeChanged?.Invoke();
+                    }
+
+                    StateMachine.Update(UpdateSystem.Update);
+                    
+                    break;
+                case UpdateSystem.PreLateUpdate:
+                    StateMachine.Update(UpdateSystem.PreLateUpdate);
+                    break;
+                case UpdateSystem.PostLateUpdate:
+                    StateMachine.Update(UpdateSystem.PostLateUpdate);
+                    break;
+                
+                case UpdateSystem.CyclopsStateMachinePostUpdate:
+                    StateMachine.Update(UpdateSystem.CyclopsStateMachinePostUpdate);
+                    break;
             }
         }
     }
