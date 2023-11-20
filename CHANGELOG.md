@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.11.1] - 2023-11-19
+
+- Fixed and simplified a few issues from the earlier release.
+
 ## [0.11.0] - 2023-11-19
 
 - Fixed cascading tag failure. It was possible for the very first tag to fail to cascade. New smoke tests should catch any deviation in expected behavior.
