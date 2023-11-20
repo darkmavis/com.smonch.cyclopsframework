@@ -18,39 +18,39 @@ using UnityEngine;
 
 namespace Smonch.CyclopsFramework
 {
-    public struct Tween3f
+    public struct TweenQSlerp
     {
-        public Vector3? from;
-        public Vector3? to;
-        public Vector3 a;
-        public Vector3 b;
+        public Quaternion? From;
+        public Quaternion? To;
+        public Quaternion A;
+        public Quaternion B;
 
-        public Vector3 Fallback
+        public Quaternion Fallback
         {
             set
             {
-                a = from ?? value;
-                b = to ?? value;
+                A = From ?? value;
+                B = To ?? value;
             }
         }
 
-        public void SetFromTo(Vector3? fromValue, Vector3? toValue)
+        public void SetFromTo(Quaternion? fromValue, Quaternion? toValue)
         {
-            from = fromValue;
-            to = toValue;
+            From = fromValue;
+            To = toValue;
         }
 
         public void Reset()
         {
-            from = null;
-            to = null;
-            a = Vector3.zero;
-            b = Vector3.zero;
+            From = null;
+            To = null;
+            A = Quaternion.identity;
+            B = Quaternion.identity;
         }
 
-        public Vector3 Evaluate(float t)
+        public Quaternion Evaluate(float t)
         {
-            return Vector3.Lerp(a, b, t);
+            return Quaternion.Slerp(A, B, t);
         }
     }
 }

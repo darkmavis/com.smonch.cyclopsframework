@@ -23,7 +23,7 @@ namespace Smonch.CyclopsFramework
     {
         private Material _material;
         private int _propertyId;
-        private Tween1f _tween;
+        private Tween1F _tween;
         
         public static TweenMaterialFloat Instantiate(
             Material material,

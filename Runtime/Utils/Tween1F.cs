@@ -15,42 +15,43 @@
 // limitations under the License.
 
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Smonch.CyclopsFramework
 {
-    public struct TweenQs
+    public struct Tween1F
     {
-        public Quaternion? from;
-        public Quaternion? to;
-        public Quaternion a;
-        public Quaternion b;
+        public float? From;
+        public float? To;
+        public float A;
+        public float B;
 
-        public Quaternion Fallback
+        public float Fallback
         {
             set
             {
-                a = from ?? value;
-                b = to ?? value;
+                A = From ?? value;
+                B = To ?? value;
             }
         }
 
-        public void SetFromTo(Quaternion? fromValue, Quaternion? toValue)
+        public void SetFromTo(float? fromValue, float? toValue)
         {
-            from = fromValue;
-            to = toValue;
+            From = fromValue;
+            To = toValue;
         }
 
         public void Reset()
         {
-            from = null;
-            to = null;
-            a = Quaternion.identity;
-            b = Quaternion.identity;
+            From = null;
+            To = null;
+            A = 0f;
+            B = 0f;
         }
 
-        public Quaternion Evaluate(float t)
+        public float Evaluate(float t)
         {
-            return Quaternion.Slerp(a, b, t);
+            return Mathf.Lerp(A, B, t);
         }
     }
 }

@@ -15,42 +15,43 @@
 // limitations under the License.
 
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Smonch.CyclopsFramework
 {
-    public struct Tween4f
+    public struct Tween2F
     {
-        public Vector4? from;
-        public Vector4? to;
-        public Vector4 a;
-        public Vector4 b;
+        public Vector2? From;
+        public Vector2? To;
+        public Vector2 A;
+        public Vector2 B;
 
-        public Vector4 Fallback
+        public Vector2 Fallback
         {
             set
             {
-                a = from ?? value;
-                b = to ?? value;
+                A = From ?? value;
+                B = To ?? value;
             }
         }
 
-        public void SetFromTo(Vector4? fromValue, Vector4? toValue)
+        public void SetFromTo(Vector2? fromValue, Vector2? toValue)
         {
-            from = fromValue;
-            to = toValue;
+            From = fromValue;
+            To = toValue;
         }
 
         public void Reset()
         {
-            from = null;
-            to = null;
-            a = Vector4.zero;
-            b = Vector4.zero;
+            From = null;
+            To = null;
+            A = Vector2.zero;
+            B = Vector2.zero;
         }
 
-        public Vector4 Evaluate(float t)
+        public Vector2 Evaluate(float t)
         {
-            return Vector4.Lerp(a, b, t);
+            return Vector2.Lerp(A, B, t);
         }
     }
 }

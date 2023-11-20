@@ -21,6 +21,7 @@ namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsGameState : CyclopsBaseState
     {
+        // ReSharper disable once MemberCanBePrivate.Global
         protected CyclopsEngine Engine { get; } = GenericPool<CyclopsEngine>.Get();
         protected virtual float DeltaTime => Time.deltaTime;
         

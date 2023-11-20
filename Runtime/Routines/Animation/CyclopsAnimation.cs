@@ -30,14 +30,15 @@ namespace Smonch.CyclopsFramework
         public override bool IsPaused
         {
             get => base.IsPaused;
+            // ReSharper disable once AssignmentInConditionalExpression
             set => _state.speed = (base.IsPaused = /* !cmp */ value) ? 0f : (float)Speed;
         }
 
-        public static CyclopsAnimation Instantiate(GameObject target, Animation animation, string clipName = null, float cycles = 1f)
+        public static CyclopsAnimation Instantiate(Animation animation, string clipName = null, float cycles = 1f)
         {
             clipName ??= animation.clip.name;
 
-            var result = InstantiateFromPool<CyclopsAnimation>(animation[clipName].length, cycles, bias:null);
+            var result = InstantiateFromPool<CyclopsAnimation>(animation[clipName].length, cycles, ease:null);
 
             result._animation = animation;
             result._state = animation[clipName];
@@ -66,11 +67,11 @@ namespace Smonch.CyclopsFramework
 
         protected override void OnLastFrame()
         {
-            if (!Mathf.Approximately(1f, _state.normalizedTime))
-            {
-                _state.normalizedTime = 1f;
-                _animation.Sample();
-            }
+            if (Mathf.Approximately(1f, _state.normalizedTime))
+                return;
+            
+            _state.normalizedTime = 1f;
+            _animation.Sample();
         }
 
         protected override void OnExit()

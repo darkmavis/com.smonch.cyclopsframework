@@ -18,39 +18,39 @@ using UnityEngine;
 
 namespace Smonch.CyclopsFramework
 {
-    public struct Tween1f
+    public struct Tween4C
     {
-        public float? from;
-        public float? to;
-        public float a;
-        public float b;
+        public Color? From;
+        public Color? To;
+        public Color A;
+        public Color B;
 
-        public float Fallback
+        public Color Fallback
         {
             set
             {
-                a = from ?? value;
-                b = to ?? value;
+                A = From ?? value;
+                B = To ?? value;
             }
         }
 
-        public void SetFromTo(float? fromValue, float? toValue)
+        public void SetFromTo(Color? fromValue, Color? toValue)
         {
-            from = fromValue;
-            to = toValue;
+            From = fromValue;
+            To = toValue;
         }
 
         public void Reset()
         {
-            from = null;
-            to = null;
-            a = 0f;
-            b = 0f;
+            From = null;
+            To = null;
+            A = new Color();
+            B = new Color();
         }
 
-        public float Evaluate(float t)
+        public Color Evaluate(float t)
         {
-            return Mathf.Lerp(a, b, t);
+            return Color.Lerp(A, B, t);
         }
     }
 }

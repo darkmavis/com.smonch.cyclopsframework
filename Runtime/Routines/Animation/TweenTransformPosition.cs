@@ -22,7 +22,7 @@ namespace Smonch.CyclopsFramework
     public class TweenTransformPosition : CyclopsRoutine
     {
         private Transform _transform;
-        private Tween3f _tween;
+        private Tween3F _tween;
 
         public static TweenTransformPosition Instantiate(
             Transform transform,
@@ -49,6 +49,7 @@ namespace Smonch.CyclopsFramework
         protected override void OnEnter()
         {
             _tween.Fallback = _transform.position;
+            SyncAtStart();
         }
 
         protected override void OnUpdate(float t)

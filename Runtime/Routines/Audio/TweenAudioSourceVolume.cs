@@ -21,7 +21,7 @@ namespace Smonch.CyclopsFramework
     public class TweenAudioSourceVolume : CyclopsRoutine
     {
         private AudioSource _source;
-        private Tween1f _tween;
+        private Tween1F _tween;
 
         public static TweenAudioSourceVolume Instantiate(
             AudioSource source,

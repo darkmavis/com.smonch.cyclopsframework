@@ -25,11 +25,11 @@ namespace Smonch.CyclopsFramework
 
         private struct AudioSettings
         {
-            public AudioClip clip;
-            public float volume;
-            public float pitch;
-            public float panStereo;
-            public Vector3 worldPosition;
+            public AudioClip Clip;
+            public float Volume;
+            public float Pitch;
+            public float PanStereo;
+            public Vector3 WorldPosition;
         }
 
         private AudioSettings _prevSettings;
@@ -45,14 +45,15 @@ namespace Smonch.CyclopsFramework
             double cycles = 1f,
             bool shouldRestoreAudioSourceSettings = true)
         {
-            var result = InstantiateFromPool<AudioRoutine>(clip.length / pitch, cycles, bias:null);
+            float length = clip == null ? source.clip.length : clip.length;
+            var result = InstantiateFromPool<AudioRoutine>(length / pitch, cycles, ease:null);
 
             result._source = source;
-            result._currSettings.clip = clip;
-            result._currSettings.pitch = pitch;
-            result._currSettings.volume = volume;
-            result._currSettings.panStereo = panStereo;
-            result._currSettings.worldPosition = worldPosition ?? source.transform.position;
+            result._currSettings.Clip = clip;
+            result._currSettings.Pitch = pitch;
+            result._currSettings.Volume = volume;
+            result._currSettings.PanStereo = panStereo;
+            result._currSettings.WorldPosition = worldPosition ?? source.transform.position;
             result._shouldRestoreAudioSourceSettings = shouldRestoreAudioSourceSettings;
 
             return result;
@@ -61,8 +62,8 @@ namespace Smonch.CyclopsFramework
         protected override void OnRecycle()
         {
             _source = null;
-            _prevSettings.clip = null;
-            _currSettings.clip = null;
+            _prevSettings.Clip = null;
+            _currSettings.Clip = null;
         }
 
         public override bool IsPaused
@@ -84,21 +85,21 @@ namespace Smonch.CyclopsFramework
         {
             if (_shouldRestoreAudioSourceSettings)
             {
-                _prevSettings.clip = _source.clip;
-                _prevSettings.pitch = _source.pitch;
-                _prevSettings.volume = _source.volume;
-                _prevSettings.panStereo = _source.panStereo;
-                _prevSettings.worldPosition = _source.transform.position;
+                _prevSettings.Clip = _source.clip;
+                _prevSettings.Pitch = _source.pitch;
+                _prevSettings.Volume = _source.volume;
+                _prevSettings.PanStereo = _source.panStereo;
+                _prevSettings.WorldPosition = _source.transform.position;
             }
         }
 
         protected override void OnFirstFrame()
         {
-            _source.pitch = _currSettings.pitch;
-            _source.volume = _currSettings.volume;
-            _source.panStereo = _currSettings.panStereo;
-            _source.transform.position = _currSettings.worldPosition;
-            _source.PlayOneShot(_currSettings.clip);
+            _source.pitch = _currSettings.Pitch;
+            _source.volume = _currSettings.Volume;
+            _source.panStereo = _currSettings.PanStereo;
+            _source.transform.position = _currSettings.WorldPosition;
+            _source.PlayOneShot(_currSettings.Clip);
         }
 
         protected override void OnLastFrame()
@@ -112,11 +113,11 @@ namespace Smonch.CyclopsFramework
 
             if (_shouldRestoreAudioSourceSettings)
             {
-                _source.clip = _prevSettings.clip;
-                _source.pitch = _prevSettings.pitch;
-                _source.volume = _prevSettings.volume;
-                _source.panStereo = _prevSettings.panStereo;
-                _source.transform.position = _prevSettings.worldPosition;
+                _source.clip = _prevSettings.Clip;
+                _source.pitch = _prevSettings.Pitch;
+                _source.volume = _prevSettings.Volume;
+                _source.panStereo = _prevSettings.PanStereo;
+                _source.transform.position = _prevSettings.WorldPosition;
             }
         }
     }

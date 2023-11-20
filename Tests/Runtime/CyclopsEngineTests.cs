@@ -14,13 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using Smonch.CyclopsFramework.Extensions;
 
 namespace Smonch.CyclopsFramework
 {
@@ -30,7 +26,7 @@ namespace Smonch.CyclopsFramework
     public class CyclopsEngineTests
     {
         private const float MaxDeltaTime = CyclopsCommon.MaxDeltaTime;
-        private const float Timeout_TwiceMaxDeltaTime = MaxDeltaTime * 2;
+        private const float TimeoutTwiceMaxDeltaTime = MaxDeltaTime * 2;
         private const string ValidTag = "test";
         private const string ValidMessageName = "TestMessage";
         private const string ValidMessageSender = "sender";
@@ -80,25 +76,95 @@ namespace Smonch.CyclopsFramework
         [Test]
         [Category("Smoke")]
         [Category("Tags")]
-        public void Nop_WithDefaultTag_ExistsOnNextFrame(
+        public void Nop_WithNopTag_ExistsOnNextFrame(
             [Values(MaxDeltaTime)] float deltaTime)
         {
             string nopTag = nameof(CyclopsNop);
 
-            Host.Next.Nop(nopTag);
+            Host.NextFrame.Nop(nopTag);
             Host.Update(deltaTime);
 
             Assert.NotZero(Host.Count(nopTag));
+        }
+        
+        [Test]
+        [Category("Smoke")]
+        [Category("Tags")]
+        public void ImmediateNop_WithNopTag_ExistsOnNextFrame(
+            [Values(MaxDeltaTime)] float deltaTime)
+        {
+            string nopTag = nameof(CyclopsNop);
+
+            Host.Immediately
+                .Nop().AddTag(nopTag)
+                .Next
+                .Nop(); // Is the tag passed on? It should be.
+            
+            Host.Update(deltaTime);
+
+            Assert.NotZero(Host.Count(nopTag));
+        }
+        
+        [Test]
+        [Category("Smoke")]
+        [Category("Tags")]
+        public void ImmediateNops_WithNopTag_Cascades(
+            [Values(MaxDeltaTime)] float deltaTime)
+        {
+            string nopTag = nameof(CyclopsNop);
+
+            Host.Immediately
+                .Nop().AddTag(nopTag)
+                .Next
+                .Nop()
+                .Next
+                .Nop()
+                .Next
+                .Nop();
+            
+            for (int i = 0; i < 3; ++i)
+            {
+                Host.Update(deltaTime);
+                Assert.NotZero(Host.Count(nopTag));
+            }
+            
+            Host.Update(deltaTime);
+            Assert.Zero(Host.Count(nopTag));
+        }
+        
+        [Test]
+        [Category("Smoke")]
+        [Category("Tags")]
+        public void NextFrameNops_WithNopTag_Cascades(
+            [Values(MaxDeltaTime)] float deltaTime)
+        {
+            string nopTag = nameof(CyclopsNop);
+
+            Host.NextFrame
+                .Nop().AddTag(nopTag)
+                .Next
+                .Nop()
+                .Next
+                .Nop();
+            
+            for (int i = 0; i < 3; ++i)
+            {
+                Host.Update(deltaTime);
+                Assert.NotZero(Host.Count(nopTag));
+            }
+            
+            Host.Update(deltaTime);
+            Assert.Zero(Host.Count(nopTag));
         }
 
         [Test]
         [Category("Smoke")]
         [Category("Tags")]
-        public void Nop_WithDefaultTag_CountIsOneOnNextFrame(
+        public void Nop_WithNopTag_CountIsOneOnNextFrame(
             [Values(nameof(CyclopsNop))] string tag,
             [Values(MaxDeltaTime)] float deltaTime)
         {
-            Host.Next.Nop(tag);
+            Host.NextFrame.Nop(tag);
             Host.Update(deltaTime);
 
             Assert.NotZero(Host.Count(tag));
@@ -111,7 +177,7 @@ namespace Smonch.CyclopsFramework
             [Values(ValidTag)] string tag,
             [Values(MaxDeltaTime)] float deltaTime)
         {
-            Host.Next.Nop(tag: tag);
+            Host.NextFrame.Nop(tag: tag);
             Host.Update(deltaTime);
 
             Assert.NotZero(Host.Count(tag));
@@ -127,7 +193,7 @@ namespace Smonch.CyclopsFramework
         {
             int x = 2;
 
-            Host.Next
+            Host.NextFrame
                 .Loop(period: 0, maxCycles: 2, () => --x)
                 .AddTag(tag);
 
@@ -157,14 +223,62 @@ namespace Smonch.CyclopsFramework
             int x = 2;
             int y = cycles;
 
-            Host.Next
+            Host.NextFrame
                 .Loop(period: 0, maxCycles: 2, () => --x)
                 .AddTag(tag);
 
-            Host.Next.Loop(period: 0, maxCycles: cycles, () => --y);
+            Host.NextFrame.Loop(period: 0, maxCycles: cycles, () => --y);
 
             // Get these routines added at the end of this frame and ready for update on the next frame.
             Host.Update(deltaTime);
+            
+            Assert.AreEqual(2, x);
+
+            Host.Pause(tag);
+
+            for (int i = 0; i < cycles; ++i)
+            {
+                // Should only update the CyclopsLambda once.
+                Host.Update(deltaTime);
+                Assert.AreEqual(1, x);
+            }
+
+            Host.Resume(tag);
+
+            // Resumes after all updates are processed.
+            Host.Update(deltaTime);
+
+            // Actually updates on the next frame.
+            Host.Update(deltaTime);
+
+            Assert.Zero(x);
+            Assert.Zero(y);
+        }
+        
+        [Test]
+        [Category("Smoke")]
+        [Category("Pausing")]
+        public void PauseAndResume_WithCascadingValidTag_DecrementsToZero(
+            [Values(ValidTag)] string tag,
+            [Values(1, 2, 3, 4, 5)] int cycles,
+            [Values(MaxDeltaTime)] float deltaTime)
+        {
+            int x = 2;
+            int y = cycles;
+
+            Host.NextFrame
+                .Nop()
+                .AddTag(tag)
+                .Next
+                .Loop(period: 0, maxCycles: 2, () => --x);
+
+            Host.NextFrame
+                .Nop() // Parity
+                .Next.Loop(period: 0, maxCycles: cycles, () => --y);
+
+            // Get these routines added at the end of this frame and ready for update on the next frame.
+            Host.Update(deltaTime); // Nop
+            Host.Update(deltaTime); // Loop
             
             Assert.AreEqual(2, x);
 
@@ -197,7 +311,7 @@ namespace Smonch.CyclopsFramework
         {
             int x = 2;
 
-            Host.Next.Add(() => --x)
+            Host.NextFrame.Add(() => --x)
                 .Next.Add(() => --x);
 
             Host.Update(deltaTime); // Added
@@ -235,7 +349,7 @@ namespace Smonch.CyclopsFramework
 
         [Test]
         [Category("Smoke")]
-        [Category("Tweens")]
+        [Category("Easing")]
         // Note: We're testing against a Standard Material because it still works (for this purpose) in other pipelines.
         public void TweenMaterialColor_WithStandardMaterial_MatchesEndColor(
             [Values("Standard Unlit Test Material")] string materialName,
@@ -255,7 +369,7 @@ namespace Smonch.CyclopsFramework
 
             material.SetColor(propertyId, toColor);
 
-            Host.Next.Add(TweenMaterialColor.Instantiate(material, propertyId, fromColor, toColor, period: 1f, cycles: 1f));
+            Host.NextFrame.Add(TweenMaterialColor.Instantiate(material, propertyId, fromColor, toColor, period: 1f, cycles: 1f));
             Host.Update(deltaTime);
 
             // TODO: Cook up a more robust solution for this.
@@ -375,7 +489,7 @@ namespace Smonch.CyclopsFramework
             [ValueSource(nameof(InvalidTags))] string receiverTag,
             [Values(ValidMessageSender)] object sender,
             [Values(CyclopsMessage.DeliveryStage.AfterRoutines)] CyclopsMessage.DeliveryStage stage,
-            [Values(Timeout_TwiceMaxDeltaTime)] float listenerTimeOut,
+            [Values(TimeoutTwiceMaxDeltaTime)] float listenerTimeOut,
             [Values(MaxDeltaTime)] float deltaTime)
         {
             Assert.Throws(typeof(UnityEngine.Assertions.AssertionException), () => Host.Send(receiverTag, name, sender, data: null, stage));
@@ -390,14 +504,14 @@ namespace Smonch.CyclopsFramework
             [Values(ValidTag)] string receiverTag,
             [Values(ValidMessageSender)] object sender,
             [Values(CyclopsMessage.DeliveryStage.AfterRoutines)] CyclopsMessage.DeliveryStage stage,
-            [Values(Timeout_TwiceMaxDeltaTime)] float listenerTimeOut,
+            [Values(TimeoutTwiceMaxDeltaTime)] float listenerTimeOut,
             [Values(MaxDeltaTime)] float deltaTime)
         {
             bool wasReceived = false;
 
             Host.Immediately
                 .Listen(receiverTag, name, listenerTimeOut)
-                .OnSuccess(inboundMessage => wasReceived = true);
+                .OnSuccess(/*inboundMessage*/ _ => wasReceived = true);
 
             Host.Send(receiverTag, name, sender, data: null, stage);
 
@@ -416,7 +530,7 @@ namespace Smonch.CyclopsFramework
             [Values(ValidTag)] string receiverTagPrefix,
             [Values(ValidMessageSender)] object sender,
             [Values(CyclopsMessage.DeliveryStage.AfterRoutines)] CyclopsMessage.DeliveryStage stage,
-            [Values(Timeout_TwiceMaxDeltaTime)] float listenerTimeOut,
+            [Values(TimeoutTwiceMaxDeltaTime)] float listenerTimeOut,
             [Values(MaxDeltaTime)] float deltaTime)
         {
             int interceptionCount = 0;
@@ -429,7 +543,7 @@ namespace Smonch.CyclopsFramework
                 {
                     Host.Immediately
                         .Listen(tag, name, listenerTimeOut)
-                        .OnSuccess(inboundMessage => ++interceptionCount);
+                        .OnSuccess(/*inboundMessage*/ _ => ++interceptionCount);
                 }
 
                 Host.Send(tag, name, sender, data: null, stage);
@@ -450,14 +564,14 @@ namespace Smonch.CyclopsFramework
             [Values(ValidTag)] string receiverTag,
             [Values(ValidMessageSender)] object sender,
             [Values(CyclopsMessage.DeliveryStage.AfterRoutines)] CyclopsMessage.DeliveryStage stage,
-            [Values(Timeout_TwiceMaxDeltaTime)] float listenerTimeOut,
+            [Values(TimeoutTwiceMaxDeltaTime)] float listenerTimeOut,
             [Values(MaxDeltaTime)] float deltaTime)
         {
             bool wasReceived = false;
 
-            Host.Next
+            Host.NextFrame
                 .Listen(receiverTag, name, listenerTimeOut)
-                .OnSuccess(inboundMessage => wasReceived = true);
+                .OnSuccess(/*inboundMessage*/ _ => wasReceived = true);
 
             Host.Send(receiverTag, name, sender, data: null, stage);
 
@@ -475,16 +589,16 @@ namespace Smonch.CyclopsFramework
             [Values(ValidTag)] string receiverTag,
             [Values(ValidMessageSender)] object sender,
             [Values(CyclopsMessage.DeliveryStage.AfterRoutines)] CyclopsMessage.DeliveryStage stage,
-            [Values(Timeout_TwiceMaxDeltaTime)] float listenerTimeOut,
+            [Values(TimeoutTwiceMaxDeltaTime)] float listenerTimeOut,
             [Values(MaxDeltaTime)] float deltaTime)
         {
             bool wasReceived = false;
 
-            Host.Next
+            Host.NextFrame
                 .Listen(receiverTag, name, listenerTimeOut)
-                .OnSuccess(inboundMessage => wasReceived = true);
+                .OnSuccess(/*inboundMessage*/ _ => wasReceived = true);
 
-            Host.Next.Add(() => Host.Send(receiverTag, name, sender, data: null, stage));
+            Host.NextFrame.Add(() => Host.Send(receiverTag, name, sender, data: null, stage));
 
             Host.Update(deltaTime);
             Host.Update(deltaTime);

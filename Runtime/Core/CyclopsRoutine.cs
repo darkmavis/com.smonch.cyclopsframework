@@ -24,12 +24,13 @@ namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsRoutine : CyclopsCommon, ICyclopsDisposable, ICyclopsPausable, ICyclopsTaggable, ICyclopsRoutineScheduler
     {
+        // ReSharper disable once InconsistentNaming - ReSharper isn't happy with standard C# naming conventions.
         private static CyclopsPool<CyclopsRoutine> s_pool;
         
         // This is important for in-editor situations where domain reloading is disabled.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void Init() => s_pool = new CyclopsPool<CyclopsRoutine>();
-
+        
         private bool _canSyncAtStart;
         private bool _isPooled;
         private bool _isReadyToCallFirstFrameAgain;
@@ -37,10 +38,11 @@ namespace Smonch.CyclopsFramework
 
         private Func<CyclopsRoutine, bool> _stoppagePredicate;
 
-        // Use a linear bias by default: t => t;
-        // Please note that all built-in Bias methods make an attempt to benefit from: MethodImplOptions.AggressiveInlining
-        protected Func<float, float> Bias { get; set; } = null;
-
+        // Use linear easing by default: t => t;
+        // Please note that all built-in easing methods make an attempt to benefit from: MethodImplOptions.AggressiveInlining
+        // ReSharper disable once MemberCanBePrivate.Global
+        protected Func<float, float> Ease { get; set; }
+        
         /// <summary>
         /// This provides a way to gracefully handle failures such as timeouts when waiting for an event or polling for a particular state.
         /// </summary>
@@ -95,16 +97,16 @@ namespace Smonch.CyclopsFramework
         protected CyclopsRoutine()
             => Initialize(0, 1, null);
 
-        public CyclopsRoutine(double period, double cycles, Func<float, float> bias = null)
-            => Initialize(period, cycles, bias);
+        public CyclopsRoutine(double period, double cycles, Func<float, float> ease = null)
+            => Initialize(period, cycles, ease);
         
         /// <summary>
         /// TODO: Fully document CyclopsRoutine.
         /// </summary>
         /// <param name="period"></param>
         /// <param name="maxCycles"></param>
-        /// <param name="bias"></param>
-        protected void Initialize(double period, double maxCycles, Func<float, float> bias)
+        /// <param name="ease"></param>
+        protected void Initialize(double period, double maxCycles, Func<float, float> ease)
         {
             Assert.IsTrue(ValidateTimingValueWhereZeroIsOk(period, out string reason), reason);
             Assert.IsTrue(ValidateTimingValue(maxCycles, out reason), reason);
@@ -113,8 +115,8 @@ namespace Smonch.CyclopsFramework
             MaxCycles = maxCycles;
             Period = period;
             Speed = 1d;
-
-            Bias = bias ?? CyclopsFramework.Bias.Linear;
+            
+            Ease = ease ?? Easing.Linear;
 
             Children = ListPool<CyclopsRoutine>.Get();
             Tags = Array.Empty<string>(); // zero alloc
@@ -122,17 +124,17 @@ namespace Smonch.CyclopsFramework
 
         private void Reinitialize()
         {
-            Initialize(Period, MaxCycles, Bias);
+            Initialize(Period, MaxCycles, Ease);
         }
 
-        protected static T InstantiateFromPool<T>(double period = 0d, double cycles = 1.0, Func<float, float> bias = null) where T : CyclopsRoutine, new()
+        protected static T InstantiateFromPool<T>(double period = 0d, double cycles = 1.0, Func<float, float> ease = null) where T : CyclopsRoutine, new()
         {
             if (s_pool.Rent(() => new T(), out T result))
                 result.Reinitialize();
 
             result.Period = period;
             result.MaxCycles = cycles;
-            result.Bias = bias;
+            result.Ease = ease;
 
             result._isPooled = true;
 
@@ -156,7 +158,7 @@ namespace Smonch.CyclopsFramework
 
         void ICyclopsDisposable.Dispose()
         {
-            Bias = null;
+            Ease = null;
             _canSyncAtStart = false;
             _isReadyToCallFirstFrameAgain = false;
             _shouldStoppageCallLastFrame = false;
@@ -316,7 +318,7 @@ namespace Smonch.CyclopsFramework
                 OnFirstFrame();
 
                 if (_canSyncAtStart)
-                    OnUpdate(Bias?.Invoke(0f) ?? 0f);
+                    OnUpdate(Ease?.Invoke(0f) ?? 0f);
             }
 
             if (Age >= MaxCycles)
@@ -346,17 +348,20 @@ namespace Smonch.CyclopsFramework
 
             var t = (float)(Age - Cycle);
 
+            if (Mathf.Approximately(t, 1f))
+                t = 1f;
+            
             if (t <= 1f)
             {
-                OnUpdate(Bias?.Invoke(t) ?? t);
+                OnUpdate(Ease?.Invoke(t) ?? t);
             }
             else if (Age >= MaxCycles)
             {
-                OnUpdate(Bias?.Invoke(1f) ?? 1f);
+                OnUpdate(Ease?.Invoke(1f) ?? 1f);
             }
             else
             {
-                OnUpdate(Bias?.Invoke(t - 1f) ?? t - 1f);
+                OnUpdate(Ease?.Invoke(t - 1f) ?? t - 1f);
             }
 
             // Cycle lags Age. This provides a way to know if OnLastFrame should be called.

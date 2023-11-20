@@ -35,14 +35,16 @@ namespace Smonch.CyclopsFramework
         private readonly HashSet<string> _resumesRequested;
         private readonly HashSet<string> _blocksRequested;
         private bool _nextAdditionIsImmediate;
-
+        
+        // ReSharper disable once MemberCanBePrivate.Global
         public float DeltaTime { get; private set; }
-        public float Fps => Mathf.Round(1f / DeltaTime);
+        public float Fps => 1f / DeltaTime;
+        // ReSharper disable once MemberCanBePrivate.Global
+        public CyclopsNext NextFrame => CyclopsNext.Rent(this);
         
         [Obsolete("Use NextFrame for clarity.")]
         public CyclopsNext Next => CyclopsNext.Rent(this);
-        public CyclopsNext NextFrame => CyclopsNext.Rent(this);
-
+        
         /// <summary>
         /// <para>Immediately allows a chained Add method (e.g. <see cref="Immediately"/>.Add(foo)) to be processed at the end of either the current or next ProcessRoutines call.</para>
         /// <para>If Immediately is used before the end of the current frame's ProcessRoutines call, the addition will be enqueued and processed on the same frame.</para>
@@ -54,7 +56,7 @@ namespace Smonch.CyclopsFramework
             get
             {
                 _nextAdditionIsImmediate = true;
-                return Next;
+                return NextFrame;
             }
         }
         
@@ -64,6 +66,7 @@ namespace Smonch.CyclopsFramework
         /// <para>Please use <see cref="Immediately"/> only when required. Failure to provide a limit combined with erroneous code could result in an endless loop.</para>
         /// <para>To enable nesting, raise MaxNestingDepth to a value greater than 1.</para>
         /// </summary>
+        // ReSharper disable once MemberCanBePrivate.Global
         public int MaxNestingDepth { get; set; } = 1;
 
         public CyclopsEngine()
@@ -132,7 +135,7 @@ namespace Smonch.CyclopsFramework
             {
                 _nextAdditionIsImmediate = false;
 
-                if (Context == null)
+                if (Context is null)
                     routine.NestingDepth = 1;
                 else
                     routine.NestingDepth = Context.NestingDepth + 1;
@@ -158,7 +161,8 @@ namespace Smonch.CyclopsFramework
         }
 
         // Control Flow
-
+        
+        // ReSharper disable once MemberCanBePrivate.Global
         public void Pause(string tag)
         {
             Assert.IsTrue(ValidateTag(tag, out string reason), reason);
@@ -170,19 +174,21 @@ namespace Smonch.CyclopsFramework
             foreach (string tag in tags)
                 Pause(tag);
         }
-
+        
+        // ReSharper disable once MemberCanBePrivate.Global
         public void Resume(string tag)
         {
             Assert.IsTrue(ValidateTag(tag, out string reason), reason);
             _resumesRequested.Add(tag);
         }
-
+        
         public void Resume(IEnumerable<string> tags)
         {
             foreach (string tag in tags)
                 Resume(tag);
         }
-
+        
+        // ReSharper disable once MemberCanBePrivate.Global
         public void Block(string tag)
         {
             Assert.IsTrue(ValidateTag(tag, out string reason), reason);
@@ -195,18 +201,21 @@ namespace Smonch.CyclopsFramework
                 Block(tag);
         }
         
+        // ReSharper disable once MemberCanBePrivate.Global
         public void Remove(string tag, bool willStopChildren = true)
         {
             Assert.IsTrue(ValidateTag(tag, out string reason), reason);
             _stopsRequested.Enqueue(new CyclopsStopRoutineRequest(tag, willStopChildren));
         }
-
+        
+        // ReSharper disable once MemberCanBePrivate.Global
         public void Remove(IEnumerable<string> tags, bool willStopChildren = true)
         {
             foreach (string tag in tags)
                 Remove(tag, willStopChildren);
         }
-
+        
+        // ReSharper disable once MemberCanBePrivate.Global
         public void Remove(ICyclopsTaggable taggedObject)
         {
             Assert.IsTrue(ValidateTaggable(taggedObject, out string reason), reason);
@@ -268,7 +277,8 @@ namespace Smonch.CyclopsFramework
             foreach (string tag in taggedObject.Tags)
                 RemoveFromTaggables(tag);
         }
-
+        
+        // ReSharper disable once MemberCanBePrivate.Global
         public int Count(string tag)
         {
             Assert.IsTrue(ValidateTag(tag, out string reason), reason);
@@ -345,6 +355,7 @@ namespace Smonch.CyclopsFramework
             Send(msg);
         }
         
+        // ReSharper disable once MemberCanBePrivate.Global
         public void Send(CyclopsMessage msg)
         {
             Assert.IsNotNull(msg.sender, "Sender must not be null.");
@@ -458,7 +469,7 @@ namespace Smonch.CyclopsFramework
 
             for (int i = 0; i < routineCount; ++i)
             {
-                var routine = _routines.Dequeue();
+                CyclopsRoutine routine = _routines.Dequeue();
 
                 if (routine.IsActive)
                 {
@@ -473,23 +484,23 @@ namespace Smonch.CyclopsFramework
 
                     if (_blocksRequested.Count > 0)
                     {
-                        foreach (var child in routine.Children)
+                        foreach (CyclopsRoutine child in routine.Children)
                         {
-                            if (!_blocksRequested.Overlaps(child.Tags))
-                            {
-                                foreach (var tag in child.Tags)
-                                    if (!tag.StartsWith(TagPrefixNoncascading))
-                                        child.AddTag(tag);
+                            if (_blocksRequested.Overlaps(child.Tags))
+                                continue;
+                            
+                            foreach (string tag in routine.Tags)
+                                if (!tag.StartsWith(TagPrefixNoncascading))
+                                    child.AddTag(tag);
 
-                                scheduler.Add(child);
-                            }
+                            scheduler.Add(child);
                         }
                     }
                     else
                     {
-                        foreach (var child in routine.Children)
+                        foreach (CyclopsRoutine child in routine.Children)
                         {
-                            foreach (var tag in child.Tags)
+                            foreach (string tag in routine.Tags)
                                 if (!tag.StartsWith(TagPrefixNoncascading))
                                     child.AddTag(tag);
 
@@ -513,29 +524,14 @@ namespace Smonch.CyclopsFramework
         {
             // Check to see if a candidate has a tag that is actively being blocked.
             // If so, don't add it; instead, continue with the next candidate.
-
-            if (_blocksRequested.Count > 0)
-            {
-                bool skipTag = false;
-
-                foreach (string tag in additionCandidate.Tags)
-                {
-                    if (!_blocksRequested.Contains(tag))
-                        continue;
-                    
-                    skipTag = true;
-                    break;
-                }
-
-                if (skipTag)
-                    return;
-            }
-
+            if (_blocksRequested.Overlaps(additionCandidate.Tags))
+                return;
+            
             if (additionCandidate is CyclopsRoutine addition)
             {
                 var skipPredicate = addition.SkipPredicate;
-
-                if (skipPredicate != null)
+                
+                if (skipPredicate is not null)
                     if (skipPredicate())
                         return;
 
@@ -559,7 +555,7 @@ namespace Smonch.CyclopsFramework
         // Q. Why aren't paused items removed from the update list for efficiency?
         // A. It would cause non-deterministic reinsertion.
         // Retaining initial order reduces complexity by removing the need to query state.
-        // Fragmentation makes a run and placeholder solution unlikely.
+        // Fragmentation makes a placeholder solution unlikely.
         private void ProcessPauseRequests()
         {
             foreach (string tag in _pausesRequested)
@@ -576,7 +572,7 @@ namespace Smonch.CyclopsFramework
             Assert.IsFalse(_nextAdditionIsImmediate, "CyclopsEngine should not currently be in immediate additions mode.  Add() should follow the use of Immediately.");
             _nextAdditionIsImmediate = false;
 
-            Assert.IsTrue(ValidateTimingValue(deltaTime, out var reason), reason);
+            Assert.IsTrue(ValidateTimingValue(deltaTime, out string reason), reason);
             
             DeltaTime = Mathf.Clamp(deltaTime, float.Epsilon, MaxDeltaTime);
             
