@@ -19,14 +19,6 @@ namespace Smonch.CyclopsFramework
         public Action Updating { get; set; }
         public Action PreLateUpdating { get; set; }
         public Action PostLateUpdating { get; set; }
-        public Action LayeredTimeUpdating { get; set; }
-        public Action LayeredInitializing { get; set; }
-        public Action LayeredEarlyUpdating { get; set; }
-        public Action LayeredFixedUpdating { get; set; }
-        public Action LayeredPreUpdating { get; set; }
-        public Action LayeredUpdating { get; set; }
-        public Action LayeredPreLateUpdating { get; set; }
-        public Action LayeredPostLateUpdating { get; set; }
         
         /// <summary>
         /// <see cref="Exited"/> is invoked any time this state is exited.
@@ -38,23 +30,14 @@ namespace Smonch.CyclopsFramework
         
         protected override void OnEnter() => Entered?.Invoke();
         
-        protected override void OnTimeUpdate() => TimeUpdating?.Invoke();
-        protected override void OnPlayerLoopInitialization() => Initializing?.Invoke();
-        protected override void OnEarlyUpdate() => EarlyUpdating?.Invoke();
-        protected override void OnFixedUpdate() => FixedUpdating?.Invoke();
-        protected override void OnPreUpdate() => PreUpdating?.Invoke();
-        protected override void OnUpdate() => Updating?.Invoke();
-        protected override void OnPreLateUpdate() => PreLateUpdating?.Invoke();
-        protected override void OnPostLateUpdate() => PostLateUpdating?.Invoke();
-        
-        protected override void OnLayeredTimeUpdate() => LayeredTimeUpdating?.Invoke();
-        protected override void OnLayeredPlayerLoopInitialization() => LayeredInitializing?.Invoke();
-        protected override void OnLayeredEarlyUpdate() => LayeredEarlyUpdating?.Invoke();
-        protected override void OnLayeredFixedUpdate() => LayeredFixedUpdating?.Invoke();
-        protected override void OnLayeredPreUpdate() => LayeredPreUpdating?.Invoke();
-        protected override void OnLayeredUpdate() => LayeredUpdating?.Invoke();
-        protected override void OnLayeredPreLateUpdate() => LayeredPreLateUpdating?.Invoke();
-        protected override void OnLayeredPostLateUpdate() => LayeredPostLateUpdating?.Invoke();
+        protected internal override void OnTimeUpdate(bool isLayered) => TimeUpdating?.Invoke();
+        protected internal override void OnPlayerLoopInitialization(bool isLayered) => Initializing?.Invoke();
+        protected internal override void OnEarlyUpdate(bool isLayered) => EarlyUpdating?.Invoke();
+        protected override void OnFixedUpdate(bool isLayered) => FixedUpdating?.Invoke();
+        protected internal override void OnPreUpdate(bool isLayered) => PreUpdating?.Invoke();
+        protected override void OnUpdate(bool isLayered) => Updating?.Invoke();
+        protected internal override void OnPreLateUpdate(bool isLayered) => PreLateUpdating?.Invoke();
+        protected internal override void OnPostLateUpdate(bool isLayered) => PostLateUpdating?.Invoke();
         
         protected override void OnExit() => Exited?.Invoke();
     }

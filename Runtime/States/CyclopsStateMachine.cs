@@ -36,8 +36,10 @@ namespace Smonch.CyclopsFramework
             while (_stateStack.Count > 0)
                 _stateStack.Pop().StopImmediately();
         }
+        
+        public void Update() => Update(CyclopsGame.UpdateSystem.CyclopsStateMachinePostUpdate);
 
-        public void Update(CyclopsGame.UpdateSystem updateSystem)
+        internal void Update(CyclopsGame.UpdateSystem updateSystem)
         {
             if (_stateStack.Count == 0)
             {
@@ -77,29 +79,29 @@ namespace Smonch.CyclopsFramework
                     
                     switch (updateSystem)
                     {
-                        case CyclopsGame.UpdateSystem.TimeUpdate:
-                            state.TimeUpdate(isLayeredUpdate: true);
-                            break;
                         case CyclopsGame.UpdateSystem.InitializationUpdate:
-                            state.PlayerLoopInitialization(isLayeredUpdate: true);
+                            topState.OnPlayerLoopInitialization(isLayered: true);
                             break;
                         case CyclopsGame.UpdateSystem.EarlyUpdate:
-                            state.EarlyUpdate(isLayeredUpdate: true);
+                            topState.OnEarlyUpdate(isLayered: true);
                             break;
                         case CyclopsGame.UpdateSystem.FixedUpdate:
-                            state.FixedUpdate(isLayeredUpdate: true);
+                            topState.FixedUpdate(isLayered: true);
                             break;
                         case CyclopsGame.UpdateSystem.PreUpdate:
-                            state.PreUpdate(isLayeredUpdate: true);
+                            topState.OnPreUpdate(isLayered: true);
                             break;
                         case CyclopsGame.UpdateSystem.Update:
-                            state.Update(isLayeredUpdate: true);
+                            topState.Update(isLayered: true);
                             break;
                         case CyclopsGame.UpdateSystem.PreLateUpdate:
-                            state.PreLateUpdate(isLayeredUpdate: true);
+                            topState.OnPreLateUpdate(isLayered: true);
                             break;
                         case CyclopsGame.UpdateSystem.PostLateUpdate:
-                            state.PostLateUpdate(isLayeredUpdate: true);
+                            topState.OnPostLateUpdate(isLayered: true);
+                            break;
+                        case CyclopsGame.UpdateSystem.TimeUpdate:
+                            topState.OnTimeUpdate(isLayered: true);
                             break;
                         default:
                             Debug.LogWarning("Unexpected UpdateSystem encountered.");
@@ -119,28 +121,28 @@ namespace Smonch.CyclopsFramework
                     switch (updateSystem)
                     {
                         case CyclopsGame.UpdateSystem.InitializationUpdate:
-                            topState.PlayerLoopInitialization(isLayeredUpdate: false);
+                            topState.OnPlayerLoopInitialization(isLayered: false);
                             break;
                         case CyclopsGame.UpdateSystem.EarlyUpdate:
-                            topState.EarlyUpdate(isLayeredUpdate: false);
+                            topState.OnEarlyUpdate(isLayered: false);
                             break;
                         case CyclopsGame.UpdateSystem.FixedUpdate:
-                            topState.FixedUpdate(isLayeredUpdate: false);
+                            topState.FixedUpdate(isLayered: false);
                             break;
                         case CyclopsGame.UpdateSystem.PreUpdate:
-                            topState.PreUpdate(isLayeredUpdate: false);
+                            topState.OnPreUpdate(isLayered: false);
                             break;
                         case CyclopsGame.UpdateSystem.Update:
-                            topState.Update(isLayeredUpdate: false);
+                            topState.Update(isLayered: false);
                             break;
                         case CyclopsGame.UpdateSystem.PreLateUpdate:
-                            topState.PreLateUpdate(isLayeredUpdate: false);
+                            topState.OnPreLateUpdate(isLayered: false);
                             break;
                         case CyclopsGame.UpdateSystem.PostLateUpdate:
-                            topState.PostLateUpdate(isLayeredUpdate: false);
+                            topState.OnPostLateUpdate(isLayered: false);
                             break;
                         case CyclopsGame.UpdateSystem.TimeUpdate:
-                            topState.TimeUpdate(isLayeredUpdate: false);
+                            topState.OnTimeUpdate(isLayered: false);
                             break;
                         default:
                             Debug.LogWarning("Unexpected UpdateSystem encountered.");

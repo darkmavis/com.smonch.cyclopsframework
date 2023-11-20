@@ -52,36 +52,14 @@ namespace Smonch.CyclopsFramework
             OnEnter();
         }
         
-        internal virtual void PlayerLoopInitialization(bool isLayeredUpdate = false)
+        /// <summary>
+        /// <see cref="FixedUpdate"/> is called by the host state machine and should not be otherwise called.
+        /// See <see cref="CyclopsState"/> for example usage. 
+        /// <seealso cref="CyclopsStateMachine"/>
+        /// </summary>
+        internal virtual void FixedUpdate(bool isLayered)
         {
-            if (isLayeredUpdate)
-                OnLayeredPlayerLoopInitialization();
-            else
-                OnPlayerLoopInitialization();
-        }
-        
-        internal virtual void EarlyUpdate(bool isLayeredUpdate = false)
-        {
-            if (isLayeredUpdate)
-                OnLayeredEarlyUpdate();
-            else
-                OnEarlyUpdate();
-        }
-        
-        internal virtual void FixedUpdate(bool isLayeredUpdate = false)
-        {
-            if (isLayeredUpdate)
-                OnLayeredFixedUpdate();
-            else
-                OnFixedUpdate();
-        }
-        
-        internal virtual void PreUpdate(bool isLayeredUpdate = false)
-        {
-            if (isLayeredUpdate)
-                OnLayeredPreUpdate();
-            else
-                OnPreUpdate();
+            OnFixedUpdate(isLayered);
         }
         
         /// <summary>
@@ -89,36 +67,9 @@ namespace Smonch.CyclopsFramework
         /// See <see cref="CyclopsState"/> for example usage. 
         /// <seealso cref="CyclopsStateMachine"/>
         /// </summary>
-        internal virtual void Update(bool isLayeredUpdate = false)
+        internal virtual void Update(bool isLayered)
         {
-            if (isLayeredUpdate)
-                OnLayeredUpdate();
-            else
-                OnUpdate();
-        }
-        
-        internal virtual void PreLateUpdate(bool isLayeredUpdate = false)
-        {
-            if (isLayeredUpdate)
-                OnLayeredPreLateUpdate();
-            else
-                OnPreLateUpdate();
-        }
-        
-        internal virtual void PostLateUpdate(bool isLayeredUpdate = false)
-        {
-            if (isLayeredUpdate)
-                OnLayeredPostLateUpdate();
-            else
-                OnPostLateUpdate();
-        }
-        
-        internal virtual void TimeUpdate(bool isLayeredUpdate = false)
-        {
-            if (isLayeredUpdate)
-                OnLayeredTimeUpdate();
-            else
-                OnTimeUpdate();
+            OnUpdate(isLayered);
         }
         
         internal void StopImmediately()
@@ -130,7 +81,7 @@ namespace Smonch.CyclopsFramework
             if (wasActive)
                 OnExit();
         }
-        
+
         /// <summary>
         /// <see cref="Stop"/> will cause the state to exit if it was entered.
         /// This will also pop a stacked state off the stack.
@@ -151,7 +102,7 @@ namespace Smonch.CyclopsFramework
         {
             _transitions.Add(transition);
         }
-        
+
         /// <summary>
         /// Add a transition from this state to a target state based on a condition.
         /// Feel free to add as many transitions as needed.
@@ -161,6 +112,17 @@ namespace Smonch.CyclopsFramework
         public void AddTransition(CyclopsBaseState target, Func<bool> predicate)
         {
             AddTransition(new CyclopsStateTransition { Target = target, Condition = predicate });
+        }
+
+        /// <summary>
+        /// Add an exit transition from this state to a target state that occurs when this state has stopped.
+        /// Feel free to add as many transitions as needed.
+        /// Transitions can not be removed, nor should they be.
+        /// <seealso cref="CyclopsStateMachine"/>
+        /// </summary>
+        public void AddExitTransition(CyclopsBaseState target)
+        {
+            AddTransition(new CyclopsStateTransition { Target = target, Condition = () => !IsActive});
         }
         
         /// <summary>
@@ -191,41 +153,31 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         protected virtual void OnEnter() { }
         
-        protected virtual void OnPlayerLoopInitialization() { }
-        protected virtual void OnEarlyUpdate() { }
-        protected virtual void OnPreUpdate() { }
+        protected internal virtual void OnPlayerLoopInitialization(bool isLayered) { }
+        protected internal virtual void OnEarlyUpdate(bool isLayered) { }
+        protected internal virtual void OnPreUpdate(bool isLayered) { }
         
         /// <summary>
         /// <see cref="OnUpdate"/> is invoked when this state is the active state in the state machine's stack.
         /// If this is the only state, then <see cref="OnUpdate"/> will always be invoked.
         /// <seealso cref="CyclopsStateMachine"/>
-        /// <seealso cref="OnLayeredUpdate"/>
         /// </summary>
-        protected virtual void OnUpdate() { }
+        protected virtual void OnUpdate(bool isLayered) { }
         
-        protected virtual void OnFixedUpdate() { }
-        protected virtual void OnPreLateUpdate() { }
-        protected virtual void OnPostLateUpdate() { }
-        protected virtual void OnTimeUpdate() { }
+        protected virtual void OnFixedUpdate(bool isLayered) { }
+        protected internal virtual void OnPreLateUpdate(bool isLayered) { }
+        protected internal virtual void OnPostLateUpdate(bool isLayered) { }
+        protected internal virtual void OnTimeUpdate(bool isLayered) { }
         
-        protected virtual void OnLayeredPlayerLoopInitialization() { }
-        protected virtual void OnLayeredEarlyUpdate() { }
-        protected virtual void OnLayeredFixedUpdate() { }
-        protected virtual void OnLayeredPreUpdate() { }
-        
-        /// <summary>
-        /// <see cref="OnLayeredUpdate"/> is invoked when this state sits below other states in the state machine's stack.
-        /// If this is the only state, then <see cref="OnLayeredUpdate"/> will not invoked.
-        /// <para><br/>Tip: Keep it simple and only use <see cref="OnLayeredUpdate"/> when background operations are truly essential.
-        /// If this isn't the simplest long-term approach, then try something else.</para>
-        /// <seealso cref="CyclopsStateMachine"/>
-        /// <seealso cref="OnUpdate"/>
-        /// </summary>
-        protected virtual void OnLayeredUpdate() { }
-        
-        protected virtual void OnLayeredPreLateUpdate() { }
-        protected virtual void OnLayeredPostLateUpdate() { }
-        protected virtual void OnLayeredTimeUpdate() { }
+        // /// <summary>
+        // /// <see cref="OnLayeredUpdate"/> is invoked when this state sits below other states in the state machine's stack.
+        // /// If this is the only state, then <see cref="OnLayeredUpdate"/> will not invoked.
+        // /// <para><br/>Tip: Keep it simple and only use <see cref="OnLayeredUpdate"/> when background operations are truly essential.
+        // /// If this isn't the simplest long-term approach, then try something else.</para>
+        // /// <seealso cref="CyclopsStateMachine"/>
+        // /// <seealso cref="OnUpdate"/>
+        // /// </summary>
+        // protected virtual void OnLayeredUpdate() { }
         
         /// <summary>
         /// <see cref="OnExit"/> is invoked any time this state is exited.
