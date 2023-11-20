@@ -8,7 +8,7 @@ The name Cyclops is descriptive. This framework was built to provide asynchronou
 
 - What if you could stop, pause, and message asynchronous sequences by tag?
 - What if you could insert cascading tags at arbitrary positions in a sequence?
-- Why pass or poll cancelation tokens manually when a framework could handle it for you? (via tags in this case)
+- Why pass or poll cancellation tokens manually when a framework could handle it for you? (via tags in this case)
 - What if you had unlimited tags and could decide which tags should cascade and which tags shouldn't?
 - What if you need a sequence with the shape of a tree?
 - What if your async routines could provide state management support?

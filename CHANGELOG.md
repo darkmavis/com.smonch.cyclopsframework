@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.11.0] - 2023-11-19
+
+- Fixed cascading tag failure. It was possible for the very first tag to fail to cascade. New smoke tests should catch any deviation in expected behavior.
+- When multiple states are stacked, states will now exit in order from the top of the stack to the bottom of the stack.
+- Added support for working with the state of Unity's player loop. CyclopsGame and CyclopsPlayerLoopState now support EarlyUpdate, FixedUpdate, LateUpdate, and more.
+- Automatic mode is becoming the default and is required for PlayerLoop support.
+- Easing replaces Bias for improved clarity.
+- Refactor and cleanup.
+
 ## [0.10.0] - 2023-08-27
 
 - Improved support for Unity subsystem events.
@@ -24,7 +33,7 @@
 
 - Added the missing 0.8.0 change log.
 - Fixed an issue with AnimationState in CyclopsAnimation where it was possible for AnimationState.speed to remain altered past its relationship with CyclopsAnimation.
-- Fixed a theorectical domain reloading issue with CyclopsRoutine's use of a static CyclopsPool. Even if domain reloading is disabled, the pool will still be properly reset.
+- Fixed a theoretical domain reloading issue with CyclopsRoutine's use of a static CyclopsPool. Even if domain reloading is disabled, the pool will still be properly reset.
 
 ## [0.8.0] - 2023-04-16
 
