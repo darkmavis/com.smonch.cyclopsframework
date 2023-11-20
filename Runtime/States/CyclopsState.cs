@@ -45,8 +45,15 @@ namespace Smonch.CyclopsFramework
         public Action Exited { get; set; }
         
         protected override void OnEnter() => Entered?.Invoke();
-        protected override void OnUpdate() => Updating?.Invoke();
-        protected override void OnLayeredUpdate() => Updating?.Invoke();
+
+        internal override void Update(bool isLayered)
+        {
+            if (isLayered)
+                Updating?.Invoke();
+            else
+                LayeredUpdating?.Invoke();
+        }
+        
         protected override void OnExit() => Exited?.Invoke();
     }
 }

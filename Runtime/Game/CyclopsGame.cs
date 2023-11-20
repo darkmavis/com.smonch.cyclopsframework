@@ -261,6 +261,7 @@ namespace Smonch.CyclopsFramework
                     break;
                 case UpdateSystem.Update:
                     // Unity will not notify on screen size changes. This is useful enough to handle here.
+                    // This actually looks pretty ugly and we're not likely to do anything similar. Hmm.
                     var currentScreenSize = new Vector2Int(Screen.width, Screen.height);
 
                     if (currentScreenSize == _screenSize)
@@ -268,18 +269,14 @@ namespace Smonch.CyclopsFramework
                         _screenSize = currentScreenSize;
                         ScreenSizeChanged?.Invoke();
                     }
-
-                    StateMachine.Update(UpdateSystem.Update);
                     
+                    StateMachine.Update(UpdateSystem.Update);
                     break;
                 case UpdateSystem.PreLateUpdate:
                     StateMachine.Update(UpdateSystem.PreLateUpdate);
                     break;
                 case UpdateSystem.PostLateUpdate:
                     StateMachine.Update(UpdateSystem.PostLateUpdate);
-                    break;
-                
-                case UpdateSystem.CyclopsStateMachinePostUpdate:
                     StateMachine.Update(UpdateSystem.CyclopsStateMachinePostUpdate);
                     break;
             }

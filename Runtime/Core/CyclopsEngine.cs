@@ -42,9 +42,6 @@ namespace Smonch.CyclopsFramework
         // ReSharper disable once MemberCanBePrivate.Global
         public CyclopsNext NextFrame => CyclopsNext.Rent(this);
         
-        [Obsolete("Use NextFrame for clarity.")]
-        public CyclopsNext Next => CyclopsNext.Rent(this);
-        
         /// <summary>
         /// <para>Immediately allows a chained Add method (e.g. <see cref="Immediately"/>.Add(foo)) to be processed at the end of either the current or next ProcessRoutines call.</para>
         /// <para>If Immediately is used before the end of the current frame's ProcessRoutines call, the addition will be enqueued and processed on the same frame.</para>
