@@ -135,7 +135,7 @@ namespace Smonch.CyclopsFramework
             {
                 _nextAdditionIsImmediate = false;
 
-                if (Context == null)
+                if (Context is null)
                     routine.NestingDepth = 1;
                 else
                     routine.NestingDepth = Context.NestingDepth + 1;
@@ -469,7 +469,7 @@ namespace Smonch.CyclopsFramework
 
             for (int i = 0; i < routineCount; ++i)
             {
-                var routine = _routines.Dequeue();
+                CyclopsRoutine routine = _routines.Dequeue();
 
                 if (routine.IsActive)
                 {
@@ -484,23 +484,23 @@ namespace Smonch.CyclopsFramework
 
                     if (_blocksRequested.Count > 0)
                     {
-                        foreach (var child in routine.Children)
+                        foreach (CyclopsRoutine child in routine.Children)
                         {
-                            if (!_blocksRequested.Overlaps(child.Tags))
-                            {
-                                foreach (var tag in child.Tags)
-                                    if (!tag.StartsWith(TagPrefixNoncascading))
-                                        child.AddTag(tag);
+                            if (_blocksRequested.Overlaps(child.Tags))
+                                continue;
+                            
+                            foreach (string tag in routine.Tags)
+                                if (!tag.StartsWith(TagPrefixNoncascading))
+                                    child.AddTag(tag);
 
-                                scheduler.Add(child);
-                            }
+                            scheduler.Add(child);
                         }
                     }
                     else
                     {
-                        foreach (var child in routine.Children)
+                        foreach (CyclopsRoutine child in routine.Children)
                         {
-                            foreach (var tag in child.Tags)
+                            foreach (string tag in routine.Tags)
                                 if (!tag.StartsWith(TagPrefixNoncascading))
                                     child.AddTag(tag);
 
@@ -524,29 +524,14 @@ namespace Smonch.CyclopsFramework
         {
             // Check to see if a candidate has a tag that is actively being blocked.
             // If so, don't add it; instead, continue with the next candidate.
-
-            if (_blocksRequested.Count > 0)
-            {
-                bool skipTag = false;
-
-                foreach (string tag in additionCandidate.Tags)
-                {
-                    if (!_blocksRequested.Contains(tag))
-                        continue;
-                    
-                    skipTag = true;
-                    break;
-                }
-
-                if (skipTag)
-                    return;
-            }
-
+            if (_blocksRequested.Overlaps(additionCandidate.Tags))
+                return;
+            
             if (additionCandidate is CyclopsRoutine addition)
             {
                 var skipPredicate = addition.SkipPredicate;
-
-                if (skipPredicate != null)
+                
+                if (skipPredicate is not null)
                     if (skipPredicate())
                         return;
 
@@ -570,7 +555,7 @@ namespace Smonch.CyclopsFramework
         // Q. Why aren't paused items removed from the update list for efficiency?
         // A. It would cause non-deterministic reinsertion.
         // Retaining initial order reduces complexity by removing the need to query state.
-        // Fragmentation makes a run and placeholder solution unlikely.
+        // Fragmentation makes a placeholder solution unlikely.
         private void ProcessPauseRequests()
         {
             foreach (string tag in _pausesRequested)
