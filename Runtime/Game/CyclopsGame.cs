@@ -57,6 +57,8 @@ namespace Smonch.CyclopsFramework
         protected CyclopsStateMachine StateMachine { get; } = new();
         // ReSharper disable once MemberCanBePrivate.Global
         
+        public CyclopsBaseState Context => StateMachine.Context;
+        
         public bool IsQuitting { get; private set; }
 
         public event Action ScreenSizeChanged;

@@ -22,33 +22,33 @@ namespace Smonch.CyclopsFramework
     public abstract class CyclopsGameState : CyclopsBaseState
     {
         // ReSharper disable once MemberCanBePrivate.Global
-        protected CyclopsEngine FixedEngine { get; } = GenericPool<CyclopsEngine>.Get();
         protected CyclopsEngine Engine { get; } = GenericPool<CyclopsEngine>.Get();
+        
+        // ReSharper disable once MemberCanBePrivate.Global
+        protected CyclopsEngine FixedEngine { get; } = GenericPool<CyclopsEngine>.Get();
         
         protected virtual float DeltaTime => Time.deltaTime;
         protected virtual float FixedDeltaTime => Time.fixedDeltaTime;
         
-        internal sealed override void FixedUpdate(bool isLayeredUpdate)
+        internal sealed override void Update(CyclopsStateUpdateContext updateContext)
         {
-            OnFixedUpdate(isLayeredUpdate);
-            FixedEngine.Update(FixedDeltaTime);
-        }
-        
-        internal sealed override void Update(bool isLayeredUpdate)
-        {
-            OnUpdate(isLayeredUpdate);
-            Engine.Update(DeltaTime);
+            OnUpdate(updateContext);
+            
+            if (updateContext.UpdateSystem == CyclopsGame.UpdateSystem.FixedUpdate)
+                FixedEngine.Update(FixedDeltaTime);
+            else if (updateContext.UpdateSystem == CyclopsGame.UpdateSystem.Update)
+                Engine.Update(DeltaTime);
         }
 
         protected override void Dispose(bool isDisposing)
         {
             base.Dispose(isDisposing);
             
-            FixedEngine.Reset();
-            GenericPool<CyclopsEngine>.Release(FixedEngine);
-            
             Engine.Reset();
             GenericPool<CyclopsEngine>.Release(Engine);
+            
+            FixedEngine.Reset();
+            GenericPool<CyclopsEngine>.Release(FixedEngine);
         }
     }
 }

@@ -21,20 +21,28 @@ namespace Smonch.CyclopsFramework
 {
     public class CyclopsStateMachine
     {
-        private readonly Stack<CyclopsBaseState> _stateStack = new();
+        private readonly LinkedList<CyclopsBaseState> _stateStack = new();
         private CyclopsBaseState _nextState;
-
+        private bool _isForceStopping;
+        
+        public CyclopsBaseState Context { get; private set; }
+        
         public bool IsIdle { get; private set; }
 
         public void PushState(CyclopsBaseState baseState)
         {
-            _stateStack.Push(baseState);
+            _stateStack.AddLast(baseState);
         }
 
         public void ForceStop()
         {
             while (_stateStack.Count > 0)
-                _stateStack.Pop().StopImmediately();
+            {
+                _stateStack.Last.Value.StopImmediately();
+                _stateStack.RemoveLast();
+            }
+
+            _isForceStopping = true;
         }
         
         public void Update() => Update(CyclopsGame.UpdateSystem.CyclopsStateMachinePostUpdate);
@@ -49,65 +57,46 @@ namespace Smonch.CyclopsFramework
             {
                 IsIdle = false;
 
-                CyclopsBaseState topState = _stateStack.Peek();
+                CyclopsBaseState topState = _stateStack.Last.Value;
+                
+                Context = topState;
                 
                 if (updateSystem == CyclopsGame.UpdateSystem.CyclopsStateMachinePostUpdate)
                 {
                     if (topState.IsStopping)
                     {
                         topState.StopImmediately();
-                        _stateStack.Pop();
+                        _stateStack.RemoveLast();
                         
-                        if (_nextState == null)
+                        if (_nextState is null)
                             topState.QueryTransitions(out _nextState);
                     }
 
-                    if (_nextState != null)
-                        _stateStack.Push(_nextState);
+                    if (_nextState is not null)
+                        _stateStack.AddLast(_nextState);
 
                     return;
                 }
-
+                
                 foreach (CyclopsBaseState state in _stateStack)
                 {
                     if (state == topState)
                         continue;
                     
+                    // Could set this to null later, but would rather not.
+                    Context = state;
+                    
                     // In case of pushing multiple states onto the stack quickly.
                     if (!state.IsActive)
                         state.Start();
                     
-                    switch (updateSystem)
-                    {
-                        case CyclopsGame.UpdateSystem.InitializationUpdate:
-                            topState.OnPlayerLoopInitialization(isLayered: true);
-                            break;
-                        case CyclopsGame.UpdateSystem.EarlyUpdate:
-                            topState.OnEarlyUpdate(isLayered: true);
-                            break;
-                        case CyclopsGame.UpdateSystem.FixedUpdate:
-                            topState.FixedUpdate(isLayered: true);
-                            break;
-                        case CyclopsGame.UpdateSystem.PreUpdate:
-                            topState.OnPreUpdate(isLayered: true);
-                            break;
-                        case CyclopsGame.UpdateSystem.Update:
-                            topState.Update(isLayered: true);
-                            break;
-                        case CyclopsGame.UpdateSystem.PreLateUpdate:
-                            topState.OnPreLateUpdate(isLayered: true);
-                            break;
-                        case CyclopsGame.UpdateSystem.PostLateUpdate:
-                            topState.OnPostLateUpdate(isLayered: true);
-                            break;
-                        case CyclopsGame.UpdateSystem.TimeUpdate:
-                            topState.OnTimeUpdate(isLayered: true);
-                            break;
-                        default:
-                            Debug.LogWarning("Unexpected UpdateSystem encountered.");
-                            break;
-                    }
+                    state.Update(new CyclopsStateUpdateContext { UpdateSystem = updateSystem, IsLayered = true });
+
+                    if (_isForceStopping)
+                        return;
                 }
+
+                Context = topState;
 
                 if (!topState.IsActive)
                     topState.Start();
@@ -118,37 +107,8 @@ namespace Smonch.CyclopsFramework
                 }
                 else
                 {
-                    switch (updateSystem)
-                    {
-                        case CyclopsGame.UpdateSystem.InitializationUpdate:
-                            topState.OnPlayerLoopInitialization(isLayered: false);
-                            break;
-                        case CyclopsGame.UpdateSystem.EarlyUpdate:
-                            topState.OnEarlyUpdate(isLayered: false);
-                            break;
-                        case CyclopsGame.UpdateSystem.FixedUpdate:
-                            topState.FixedUpdate(isLayered: false);
-                            break;
-                        case CyclopsGame.UpdateSystem.PreUpdate:
-                            topState.OnPreUpdate(isLayered: false);
-                            break;
-                        case CyclopsGame.UpdateSystem.Update:
-                            topState.Update(isLayered: false);
-                            break;
-                        case CyclopsGame.UpdateSystem.PreLateUpdate:
-                            topState.OnPreLateUpdate(isLayered: false);
-                            break;
-                        case CyclopsGame.UpdateSystem.PostLateUpdate:
-                            topState.OnPostLateUpdate(isLayered: false);
-                            break;
-                        case CyclopsGame.UpdateSystem.TimeUpdate:
-                            topState.OnTimeUpdate(isLayered: false);
-                            break;
-                        default:
-                            Debug.LogWarning("Unexpected UpdateSystem encountered.");
-                            break;
-                    }
-
+                    topState.Update(new CyclopsStateUpdateContext { UpdateSystem = updateSystem, IsLayered = false });
+                    
                     if (topState.QueryTransitions(out _nextState))
                         topState.Stop();
                 }

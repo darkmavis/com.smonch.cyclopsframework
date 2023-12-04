@@ -46,12 +46,15 @@ namespace Smonch.CyclopsFramework
         
         protected override void OnEnter() => Entered?.Invoke();
 
-        internal override void Update(bool isLayered)
+        internal override void Update(CyclopsStateUpdateContext updateContext)
         {
-            if (isLayered)
-                Updating?.Invoke();
-            else
+            if (updateContext.UpdateSystem != CyclopsGame.UpdateSystem.Update)
+                return;
+            
+            if (updateContext.IsLayered)
                 LayeredUpdating?.Invoke();
+            else
+                Updating?.Invoke();
         }
         
         protected override void OnExit() => Exited?.Invoke();
