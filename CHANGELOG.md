@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.12.1] - 2023-12-04
+
+- Fixed a minor issue with the new state handling.
+
 ## [0.12.0] - 2023-12-03
 
 - Simplified state handling.

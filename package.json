@@ -1,6 +1,6 @@
 {
   "name": "com.smonch.cyclopsframework",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "displayName": "Cyclops Framework",
   "description": "Cyclops Framework provides a tag-based approach to simplifying state management, asynchronous routines, messaging, and tweening.  It plays well with others, drops nicely into existing projects, and you can use as much or little of it as you like.\n\nBut why?\n\nImagine that you have several coroutine sequences running in parallel and you don't know how long they'll take to complete.\n\nWhat if you could tag these sequences and then stop or pause them by tag?\nWhat if you wanted to insert cascading tags at various points in a sequence?\nWhat if a sequence is shaped like a tree?\nWhat if you could use as many tags as you like and decide which tags should cascade and which tags shouldn't?\nWhat if your coroutines provided state management events such as OnEnter, OnExit, and OnUpdate?\nWhat if these coroutines could repeat for a number of cycles and provide cycle specific events such as OnFirstFrame and OnLastFrame?\nWhat if you could send messages by tag to anything you'd like, no receiver required?\n\nCyclops Framework was built for these types of situations.  Usage should lead to greater flexibility with less code written.",
   "unity": "2021.3",

@@ -44,8 +44,12 @@ namespace Smonch.CyclopsFramework
 
             _isForceStopping = true;
         }
-        
-        public void Update() => Update(CyclopsGame.UpdateSystem.CyclopsStateMachinePostUpdate);
+
+        public void Update()
+        {
+            Update(CyclopsGame.UpdateSystem.Update);
+            Update(CyclopsGame.UpdateSystem.CyclopsStateMachinePostUpdate);
+        }
 
         internal void Update(CyclopsGame.UpdateSystem updateSystem)
         {
