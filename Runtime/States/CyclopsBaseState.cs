@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2023 Mark Davis
+// Copyright 2010 - 2024 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
@@ -30,22 +31,22 @@ namespace Smonch.CyclopsFramework
     /// </summary>
     public abstract class CyclopsBaseState : IDisposable
     {
-        private readonly List<CyclopsStateTransition> _transitions;
+        private readonly List<CyclopsStateTransition> _transitions = ListPool<CyclopsStateTransition>.Get();
+        private CancellationTokenSource _exitCancellationTokenSource = new();
 
+        // ReSharper disable once MemberCanBePrivate.Global
+        public CancellationToken ExitCancellationToken { get; private set; } = default;
         internal bool IsActive { get; private set; }
         internal bool IsStopping { get; private set; }
 
-        protected CyclopsBaseState()
-        {
-            _transitions = ListPool<CyclopsStateTransition>.Get();
-        }
-        
         /// <summary>
         /// <see cref="Start"/> is called by the host state machine and should not be otherwise called.
         /// <seealso cref="CyclopsStateMachine"/>
         /// </summary>
         internal void Start()
         {
+            _exitCancellationTokenSource ??= new CancellationTokenSource();
+            ExitCancellationToken = _exitCancellationTokenSource.Token;
             IsActive = true;
             IsStopping = false;
             
@@ -67,6 +68,9 @@ namespace Smonch.CyclopsFramework
             bool wasActive = IsActive;
             
             IsActive = false;
+            _exitCancellationTokenSource.Cancel();
+            _exitCancellationTokenSource.Dispose();
+            _exitCancellationTokenSource = null;
             
             if (wasActive)
                 OnExit();
@@ -80,6 +84,7 @@ namespace Smonch.CyclopsFramework
         public void Stop()
         {
             IsStopping = true;
+            
         }
         
         /// <summary>

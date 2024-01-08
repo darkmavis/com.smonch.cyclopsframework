@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.13.0] - 2024-01-06
+
+- Removed manual update mode from CyclopsGame. It's no longer needed.
+- Removed ScreenSizeChanged event from CyclopsGame. It's no longer needed.
+- CyclopsGame now exposes it's state machine as a public property.
+- CyclopsGame uses a subclassed state machine to ensure that it is the sole driver of its state machine.
+- Removed state machine related methods from CyclopsGame.
+- Changes to CyclopsGame ensure that it can be subclassed cleanly if that approach is desired.
+- Added ExitCancellationToken to CyclopsBaseState. Tight integration with async and Unity's Awaitable to follow.
+
 ## [0.12.1] - 2023-12-04
 
 - Fixed a minor issue with the new state handling.

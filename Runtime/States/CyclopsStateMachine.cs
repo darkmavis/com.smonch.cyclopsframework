@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2023 Mark Davis
+// Copyright 2010 - 2024 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,13 +15,12 @@
 // limitations under the License.
 
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Smonch.CyclopsFramework
 {
     public class CyclopsStateMachine
     {
-        private readonly LinkedList<CyclopsBaseState> _stateStack = new();
+        private readonly LinkedList<CyclopsBaseState> _stateLinkedStack = new();
         private CyclopsBaseState _nextState;
         private bool _isForceStopping;
         
@@ -31,20 +30,21 @@ namespace Smonch.CyclopsFramework
 
         public void PushState(CyclopsBaseState baseState)
         {
-            _stateStack.AddLast(baseState);
+            _stateLinkedStack.AddLast(baseState);
         }
 
         public void ForceStop()
         {
-            while (_stateStack.Count > 0)
+            while (_stateLinkedStack.Count > 0)
             {
-                _stateStack.Last.Value.StopImmediately();
-                _stateStack.RemoveLast();
+                _stateLinkedStack.Last.Value.StopImmediately();
+                _stateLinkedStack.RemoveLast();
             }
 
             _isForceStopping = true;
         }
 
+        // ReSharper disable once MemberCanBeProtected.Global
         public void Update()
         {
             Update(CyclopsGame.UpdateSystem.Update);
@@ -53,7 +53,7 @@ namespace Smonch.CyclopsFramework
 
         internal void Update(CyclopsGame.UpdateSystem updateSystem)
         {
-            if (_stateStack.Count == 0)
+            if (_stateLinkedStack.Count == 0)
             {
                 IsIdle = true;
             }
@@ -61,7 +61,7 @@ namespace Smonch.CyclopsFramework
             {
                 IsIdle = false;
 
-                CyclopsBaseState topState = _stateStack.Last.Value;
+                CyclopsBaseState topState = _stateLinkedStack.Last.Value;
                 
                 Context = topState;
                 
@@ -70,19 +70,19 @@ namespace Smonch.CyclopsFramework
                     if (topState.IsStopping)
                     {
                         topState.StopImmediately();
-                        _stateStack.RemoveLast();
+                        _stateLinkedStack.RemoveLast();
                         
                         if (_nextState is null)
                             topState.QueryTransitions(out _nextState);
                     }
 
                     if (_nextState is not null)
-                        _stateStack.AddLast(_nextState);
+                        _stateLinkedStack.AddLast(_nextState);
 
                     return;
                 }
                 
-                foreach (CyclopsBaseState state in _stateStack)
+                foreach (CyclopsBaseState state in _stateLinkedStack)
                 {
                     if (state == topState)
                         continue;

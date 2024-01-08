@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2023 Mark Davis
+// Copyright 2010 - 2024 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.LowLevel;
@@ -30,15 +29,7 @@ namespace Smonch.CyclopsFramework
     public class CyclopsGame
     {
         private bool _isActive;
-        private bool _isUsingAutomaticUpdateMode;
         private PlayerLoopSystem _originalPlayerLoopSystem;
-        private Vector2Int _screenSize;
-
-        public enum UpdateMode
-        {
-            Automatic,
-            ManualLimited
-        }
         
         public enum UpdateSystem
         {
@@ -54,35 +45,19 @@ namespace Smonch.CyclopsFramework
         }
         
         // ReSharper disable once MemberCanBePrivate.Global
-        protected CyclopsStateMachine StateMachine { get; } = new();
+        public CyclopsGameStateMachine StateMachine { get; } = new();
+        
         // ReSharper disable once MemberCanBePrivate.Global
-        
-        public CyclopsBaseState Context => StateMachine.Context;
-        
         public bool IsQuitting { get; private set; }
-
-        public event Action ScreenSizeChanged;
         
-        public void Start(CyclopsBaseState initialState, UpdateMode updateMode = UpdateMode.Automatic)
+        public void Start(CyclopsBaseState initialState)
         {
             Assert.IsFalse(_isActive, $"{nameof(CyclopsGame)} was already started.");
-
-            if (_isActive)
-                return;
-
+            
             _isActive = true;
-
-            if (updateMode == UpdateMode.Automatic)
-                _isUsingAutomaticUpdateMode = true;
-            
-            _screenSize = new Vector2Int(Screen.width, Screen.height);
-
-            StateMachine.PushState(initialState);
-
-            if (!_isUsingAutomaticUpdateMode)
-                return;
-            
             _originalPlayerLoopSystem = PlayerLoop.GetCurrentPlayerLoop();
+            
+            StateMachine.PushState(initialState);
             
             var cylopsInitialization = new PlayerLoopSystem
             {
@@ -208,30 +183,11 @@ namespace Smonch.CyclopsFramework
 
         private void Stop()
         {
-            Assert.IsTrue((_isActive && Application.isPlaying)
-                || (_isUsingAutomaticUpdateMode && _isActive && !Application.isPlaying),
-                "Stop was already called and did not need to be called again.");
+            Assert.IsTrue(_isActive, "Stop was already called and did not need to be called again.");
             
             StateMachine.ForceStop();
-            _isActive = false;
-            
             PlayerLoop.SetPlayerLoop(_originalPlayerLoopSystem);
-        }
-
-        public void Update()
-        {
-            Assert.IsFalse(_isUsingAutomaticUpdateMode, "Update should not be called manually while using UnityEngine.PlayerLoop.Update to drive updates.");
-            Assert.IsTrue(_isActive, "Update should not be called unless CyclopsGame is active.");
-
-            if (!_isActive)
-                return;
-
-            UpdateStateMachine(UpdateSystem.Update);
-        }
-        
-        public void PushState(CyclopsBaseState state)
-        {
-            StateMachine.PushState(state);
+            _isActive = false;
         }
         
         private void UpdateStateMachine(UpdateSystem updateSystem)
@@ -262,16 +218,6 @@ namespace Smonch.CyclopsFramework
                     StateMachine.Update(UpdateSystem.PreUpdate);
                     break;
                 case UpdateSystem.Update:
-                    // Unity will not notify on screen size changes. This is useful enough to handle here.
-                    // This actually looks pretty ugly and we're not likely to do anything similar. Hmm.
-                    var currentScreenSize = new Vector2Int(Screen.width, Screen.height);
-
-                    if (currentScreenSize == _screenSize)
-                    {
-                        _screenSize = currentScreenSize;
-                        ScreenSizeChanged?.Invoke();
-                    }
-                    
                     StateMachine.Update(UpdateSystem.Update);
                     break;
                 case UpdateSystem.PreLateUpdate:
