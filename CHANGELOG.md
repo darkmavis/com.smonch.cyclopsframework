@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.13.1] - 2024-01-09
+
+- Added JumpTo(age) to CyclopsRoutine. It will allow jumping to a specific age. (Cycle + Position)
+
 ## [0.13.0] - 2024-01-06
 
 - Removed manual update mode from CyclopsGame. It's no longer needed.

@@ -273,10 +273,14 @@ namespace Smonch.CyclopsFramework
             ++Age;
         }
         
-        public void JumpTo(double t)
+        /// <summary>
+        /// Jumps to age which is Cycle + Position.
+        /// </summary>
+        /// <param name="age"></param>
+        public void JumpTo(double age)
         {
-            Age = t;
-            Cycle = Math.Floor(t);
+            Age = age;
+            Cycle = Math.Floor(age);
         }
 
         protected void Fail()
