@@ -1,6 +1,6 @@
 // Cyclops Framework
 // 
-// Copyright 2010 - 2023 Mark Davis
+// Copyright 2010 - 2024 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -271,6 +271,12 @@ namespace Smonch.CyclopsFramework
         public void StepForward()
         {
             ++Age;
+        }
+        
+        public void JumpTo(double t)
+        {
+            Age = t;
+            Cycle = Math.Floor(t);
         }
 
         protected void Fail()
