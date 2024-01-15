@@ -48,7 +48,7 @@ namespace Smonch.CyclopsFramework
         protected override void OnRecycle()
         {
             _messageName = null;
-            _timedOut = false;
+            _timedOut = true;
 
             SuccessHandler = null;
         }

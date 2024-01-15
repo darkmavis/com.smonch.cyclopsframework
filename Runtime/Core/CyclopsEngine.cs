@@ -528,9 +528,8 @@ namespace Smonch.CyclopsFramework
             {
                 var skipPredicate = addition.SkipPredicate;
                 
-                if (skipPredicate is not null)
-                    if (skipPredicate())
-                        return;
+                if (skipPredicate?.Invoke() ?? false)
+                    return;
 
                 _routines.Enqueue(addition);
             }

@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using UnityEngine;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
@@ -178,6 +179,66 @@ namespace Smonch.CyclopsFramework
             ListPool<CyclopsStateTransition>.Release(_transitions);
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+        
+        public async Awaitable WaitForSecondsAsync(float seconds)
+        {
+            try
+            {
+                await Awaitable.WaitForSecondsAsync(seconds, ExitCancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // ignored
+            }
+        }
+        
+        public async Awaitable FixedUpdateAsync()
+        {
+            try
+            {
+                await Awaitable.FixedUpdateAsync(ExitCancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // ignored
+            }
+        }
+        
+        public async Awaitable FromAsyncOperation(AsyncOperation op)
+        {
+            try
+            {
+                await Awaitable.FromAsyncOperation(op, ExitCancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // ignored
+            }
+        }
+        
+        public async Awaitable NextFrameAsync()
+        {
+            try
+            {
+                await Awaitable.NextFrameAsync(ExitCancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // ignored
+            }
+        }
+        
+        public async Awaitable EndOfFrameAsync()
+        {
+            try
+            {
+                await Awaitable.EndOfFrameAsync(ExitCancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // ignored
+            }
         }
     }
 }

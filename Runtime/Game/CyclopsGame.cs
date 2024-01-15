@@ -26,6 +26,11 @@ using UnityEditor;
 
 namespace Smonch.CyclopsFramework
 {
+    /// <summary>
+    /// CyclopsGame is designed to be started via a bootstrap method of your choice.<br/>
+    /// If it suits your needs, implement via Awake in a Monobehaviour.<br/>
+    /// CyclopsGame contains and drives a traditional state machine based on CyclopsStateMachine.
+    /// </summary>
     public class CyclopsGame
     {
         private bool _isActive;

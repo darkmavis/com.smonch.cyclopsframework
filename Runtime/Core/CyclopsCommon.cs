@@ -21,13 +21,10 @@ namespace Smonch.CyclopsFramework
     public abstract class CyclopsCommon
     {
         public const string TagAll = "*";
-        public const string TagLog = "Cyclops.Log";
         public const string TagPrefixNoncascading = "!";
         public const float MaxDeltaTime = .25f;
         
         public CyclopsRoutine Context { get; protected set; }
-        
-        public static Action<string> Logger { get; set; }
 
         /// <summary>
         /// Validates that a Cyclops Framework tag is actually useful.

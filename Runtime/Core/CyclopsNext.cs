@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2023 Mark Davis
+// Copyright 2010 - 2024 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 // limitations under the License.
 
 using System;
+using UnityEngine;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
@@ -44,22 +45,11 @@ namespace Smonch.CyclopsFramework
         }
 
         public CyclopsLambda Add(Action f)
-        {
-            return Add(CyclopsLambda.Instantiate(f));
-        }
-
-        public CyclopsLambda Add(string tag, Action f)
-        {
-            return (CyclopsLambda)Add(CyclopsLambda.Instantiate(f))
-                .AddTag(tag);
-        }
-
-        public CyclopsRoutine Add(string tag, CyclopsRoutine routine)
-        {
-            return Add(routine)
-                .AddTag(tag);
-        }
-
+            => Add(CyclopsLambda.Instantiate(f));
+        
+        public CyclopsRoutine Log(string text)
+            => Debug.isDebugBuild ? Add(CyclopsLambda.Instantiate(() => Debug.Log(text))) : Context;
+        
         public CyclopsLambda Loop(Action f)
             => Add(CyclopsLambda.Instantiate(period: 0f, maxCycles: float.MaxValue, f));
         
@@ -70,7 +60,7 @@ namespace Smonch.CyclopsFramework
         {
             CyclopsLambda context = null;
             
-            var routine = context = Add(CyclopsLambda.Instantiate(period, float.MaxValue, () =>
+            CyclopsLambda routine = context = Add(CyclopsLambda.Instantiate(period, float.MaxValue, () =>
             {
                 if (!predicate())
                     context!.Stop();
@@ -101,17 +91,8 @@ namespace Smonch.CyclopsFramework
             return routine;
         }
 
-        public CyclopsRoutine Nop(string tag = null, int maxCycles = 1)
-        {
-            CyclopsNop nop = CyclopsNop.Instantiate(maxCycles);
-
-            if (tag != null)
-                nop.AddTag(tag);
-
-            Add(nop);
-
-            return nop;
-        }
+        public CyclopsRoutine Nop(int maxCycles = 1)
+            => Add(CyclopsNop.Instantiate(maxCycles));
 
         public CyclopsSleep Sleep(double period)
             => Add(CyclopsSleep.Instantiate(period));
@@ -121,13 +102,19 @@ namespace Smonch.CyclopsFramework
 
         public CyclopsWaitForMessage Listen(string receiverTag, string messageName, double timeout, double maxCycles = 1)
             => Add(CyclopsWaitForMessage.Instantiate(receiverTag, messageName, timeout, maxCycles));
-
+        
+        public CyclopsWaitForEvent WaitForEvent(ref Action multicastDelegate, double timeout = double.MaxValue, double maxCycles = 1.0, Action handler = null)
+            => Add(CyclopsWaitForEvent.Instantiate(ref multicastDelegate, timeout, maxCycles, handler));
+        
+        public CyclopsWaitForEvent<T> WaitForEvent<T>(ref Action<T> multicastDelegate, double timeout = double.MaxValue, double maxCycles = 1.0, Action<T> handler = null)
+            => Add(CyclopsWaitForEvent<T>.Instantiate(ref multicastDelegate, timeout, maxCycles, handler));
+        
         public CyclopsTask WaitForTask(Action<CyclopsTask> f)
             => Add(CyclopsTask.Instantiate(f));
 
         public CyclopsWaitUntil WaitUntil(Func<bool> condition)
             => Add(CyclopsWaitUntil.Instantiate(condition));
-
+        
         public CyclopsWaitUntil WaitUntil(Func<bool> condition, double timeout)
             => Add(CyclopsWaitUntil.Instantiate(condition, timeout));
 
@@ -136,54 +123,5 @@ namespace Smonch.CyclopsFramework
 
         public CyclopsUpdate Lerp(double period, double maxCycles, Action<float> f, Func<float, float> bias = null)
             => Add(CyclopsUpdate.Instantiate(period, maxCycles, bias, f));
-        
-        /// <summary>
-        /// Logs non-deferred text via either CyclopsCommon.Logger or UnityEngine.Debug.Log.
-        /// For lazy evaluation, please use: Log(lazyPrinter)
-        /// If CyclopsCommon.Logger is null, logging will default to UnityEngine.Debug.
-        /// When using UnityEngine.Debug, logging is only available for debug builds.
-        /// To log output without a Unity project reference, please ensure that CyclopsCommon.Logger refers to the desired logger.
-        /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
-		public CyclopsRoutine Log(string text)
-        {
-            if (Logger == null)
-            {
-#if (UNITY_EDITOR || DEVELOPMENT_BUILD)
-                return Add(tag: TagLog, f: () => UnityEngine.Debug.Log(text));
-#else
-                return Context;
-#endif
-            }
-            else
-            {
-                return Add(tag: TagLog, f: () => Logger?.Invoke(text));
-            }
-        }
-
-        /// <summary>
-        /// Logs via either CyclopsCommon.Logger or UnityEngine.Debug.Log using a deferred printing function.
-        /// If CyclopsCommon.Logger is null, logging will default to UnityEngine.Debug.
-        /// When using UnityEngine.Debug, logging is only available for debug builds.
-        /// To log output without a Unity project reference, please ensure that CyclopsCommon.Logger refers to the desired logger.
-        /// </summary>
-        /// <param name="lazyPrinter"></param>
-        /// <returns></returns>
-        public CyclopsRoutine Log(Func<string> lazyPrinter)
-        {
-            if (Logger == null)
-            {
-#if (UNITY_EDITOR || DEVELOPMENT_BUILD)
-                return Add(tag: TagLog, f: () => UnityEngine.Debug.Log(lazyPrinter()));
-#else
-                return Context;
-#endif
-            }
-            else
-            {
-                return Add(tag: TagLog, f: () => Logger?.Invoke(lazyPrinter()));
-            }
-        }
     }
 }
