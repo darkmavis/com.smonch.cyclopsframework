@@ -17,42 +17,86 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Assertions;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
 {
     public sealed class CyclopsEngine : CyclopsCommon, ICyclopsRoutineScheduler, IDisposable
     {
+        /// The registry stores the relationships between tags and tagged objects.
         private readonly Dictionary<string, HashSet<ICyclopsTaggable>> _registry;
+        
+        /// This contains all actions to be added on a given frame after general processing is complete.
         private readonly Queue<ICyclopsTaggable> _additions;
+        
+        /// This contains all actions to be removed on a given frame after general processing is complete.
         private readonly Queue<ICyclopsTaggable> _removals;
+        
+        //// This contains all routines to be processed at the beginning of a frame.
         private Queue<CyclopsRoutine> _routines;
+        
+        /// This exists for double buffering purposes.
         private Queue<CyclopsRoutine> _finishedRoutines;
-        private readonly Queue<CyclopsStopRoutineRequest> _stopsRequested;
+        
+        /// This contains stop requests (by tag) for tagged objects.
+        /// Any object with a requested tag will be stopped.
+        /// If multiple objects contain the same tag, they will all be stopped.
+        private readonly Queue<CyclopsStopRoutineRequest> _stopRequests;
+        
+        /// This contains messages to be delivered to tagged objects.
         private readonly Queue<CyclopsMessage> _messages;
-        private readonly HashSet<string> _pausesRequested;
-        private readonly HashSet<string> _resumesRequested;
-        private readonly HashSet<string> _blocksRequested;
-        private bool _nextAdditionIsImmediate;
+        
+        /// <p>This contains pause requests (by tag) for tagged objects.
+        /// Any object with a requested tag will be paused.
+        /// If multiple objects contain the same tag, they will all be paused.</p>
+        /// <p>Please note that pause requests are processed after resume requests.
+        /// Items that have just been resumed are still eligible to be paused.</p>
+        private readonly HashSet<string> _pauseRequests;
+        
+        /// <p>This contains resume requests (by tag) for currently paused tagged objects.
+        /// Any object with a requested tag will be resumed if already paused.
+        /// If multiple objects contain the same tag, they will all be resumed.</p>
+        /// <p>Please note that pause requests are processed after resume requests.
+        /// Items that have just been resumed are still eligible to be paused.</p>
+        private readonly HashSet<string> _resumeRequests;
+        
+        /// <p>This contains block requests (by tag) for tagged objects.
+        /// Block requests prevent a tagged object from being added at anytime
+        /// during the current frame if it contains a specified tag.</p>
+        /// <p>This prevent sometimes unforeseen concurrency issues such as that where
+        /// a message delivery might cause a tagged object to be added after removals are complete.</p>
+        private readonly HashSet<string> _blockingRequests;
+        
+        private bool _isNextAdditionImmediate;
         
         // ReSharper disable once MemberCanBePrivate.Global
         public float DeltaTime { get; private set; }
         public float Fps => 1f / DeltaTime;
+        
+        /// <summary>
+        /// <para><b>Always prefer <see cref="NextFrame"/> to <see cref="Immediately"/> unless</b> there is a compelling reason to make something happen at the end of this frame.</para>
+        /// <para>Starting new routines on the next frame improves determinism and as such will make everything easier to reason about. This advice applies to more than just Cyclops Framework.</para>
+        /// <para><see cref="NextFrame"/> allows a chained Add method (e.g. <see cref="NextFrame"/>.Add(foo)) to be processed during the next <see cref="ProcessRoutines"/> call.
+        /// Routines are processed in the order they are added. If a routine is paused, it will keep it's place in the queue in order to keep things easier to reason about.</para>
+        /// <para>Tip: <see cref="NextFrame"/> can be use with other common methods that use <see cref="CyclopsNext.Add{T}"/> internally such as <see cref="CyclopsNext.Listen(string,string)"/>,
+        /// <see cref="CyclopsNext.Sleep"/>, <see cref="CyclopsNext.WaitUntil(System.Func{bool})"/>, etc.</para>
+        /// </summary>
         // ReSharper disable once MemberCanBePrivate.Global
         public CyclopsNext NextFrame => CyclopsNext.Rent(this);
         
         /// <summary>
+        /// <para><b>Always prefer <see cref="NextFrame"/> to <see cref="Immediately"/> unless</b> there is a compelling reason to make something happen at the end of this frame.</para>
         /// <para>Immediately allows a chained Add method (e.g. <see cref="Immediately"/>.Add(foo)) to be processed at the end of either the current or next ProcessRoutines call.</para>
         /// <para>If Immediately is used before the end of the current frame's ProcessRoutines call, the addition will be enqueued and processed on the same frame.</para>
         /// <para>If Immediately is used after the end of the current frame's ProcessRoutines call, the addition will be enqueued and processed on the next frame.</para>
-        /// <para>Tip: Immediately can be use with other common methods that use Add internally such as Listen, Sleep, WaitUntil, etc.</para>
+        /// <para>Tip: Immediately can be use with other common methods that use <see cref="CyclopsNext.Add{T}"/> internally such as <see cref="CyclopsNext.Listen(string,string)"/>,
+        /// <see cref="CyclopsNext.Sleep"/>, <see cref="CyclopsNext.WaitUntil(System.Func{bool})"/>, etc.</para>
         /// </summary>
         public CyclopsNext Immediately
         {
             get
             {
-                _nextAdditionIsImmediate = true;
+                _isNextAdditionImmediate = true;
                 return NextFrame;
             }
         }
@@ -65,24 +109,29 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         // ReSharper disable once MemberCanBePrivate.Global
         public int MaxNestingDepth { get; set; } = 1;
-
+        
+        /// <summary>
+        /// <p><see cref="CyclopsEngine"/> is the heart of the Cyclops Framework but stands alone as well.
+        /// An <see cref="CyclopsEngine"/> controls sequencing, timing, tagging, messaging, and queries.</p>
+        /// <p>Feel free to create as many <see cref="CyclopsEngine"/>s as required throughout your project.</p>
+        /// </summary>
         public CyclopsEngine()
         {
-            // Note: Internally, GenericPool (and who knows what else) uses RemoveAt within a List and it looks like a design flaw.
-            // It wastes a few cycles as a result, but should easily outperform memory allocation + GC hiccups.
-            // And who knows... by the time you're reading this, it might be fixed.
             _registry = DictionaryPool<string, HashSet<ICyclopsTaggable>>.Get();
             _routines = GenericPool<Queue<CyclopsRoutine>>.Get();
             _finishedRoutines = GenericPool<Queue<CyclopsRoutine>>.Get();
             _additions = GenericPool<Queue<ICyclopsTaggable>>.Get();
             _removals = GenericPool<Queue<ICyclopsTaggable>>.Get();
-            _stopsRequested = GenericPool<Queue<CyclopsStopRoutineRequest>>.Get();
+            _stopRequests = GenericPool<Queue<CyclopsStopRoutineRequest>>.Get();
             _messages = GenericPool<Queue<CyclopsMessage>>.Get();
-            _pausesRequested = HashSetPool<string>.Get();
-            _resumesRequested = HashSetPool<string>.Get();
-            _blocksRequested = HashSetPool<string>.Get();
+            _pauseRequests = HashSetPool<string>.Get();
+            _resumeRequests = HashSetPool<string>.Get();
+            _blockingRequests = HashSetPool<string>.Get();
         }
-
+        
+        /// <summary>
+        /// Dispose of the <see cref="CyclopsEngine"/> and all of its pooled resources.
+        /// </summary>
         public void Dispose()
         {
             DictionaryPool<string, HashSet<ICyclopsTaggable>>.Release(_registry);
@@ -90,13 +139,16 @@ namespace Smonch.CyclopsFramework
             GenericPool<Queue<CyclopsRoutine>>.Release(_finishedRoutines);
             GenericPool<Queue<ICyclopsTaggable>>.Release(_additions);
             GenericPool<Queue<ICyclopsTaggable>>.Release(_removals);
-            GenericPool<Queue<CyclopsStopRoutineRequest>>.Release(_stopsRequested);
+            GenericPool<Queue<CyclopsStopRoutineRequest>>.Release(_stopRequests);
             GenericPool<Queue<CyclopsMessage>>.Release(_messages);
-            HashSetPool<string>.Release(_pausesRequested);
-            HashSetPool<string>.Release(_resumesRequested);
-            HashSetPool<string>.Release(_blocksRequested);
+            HashSetPool<string>.Release(_pauseRequests);
+            HashSetPool<string>.Release(_resumeRequests);
+            HashSetPool<string>.Release(_blockingRequests);
         }
 
+        /// <summary>
+        /// Reset the Engine for disposal or reuse.
+        /// </summary>
         public void Reset()
         {
             Remove(TagAll);
@@ -109,37 +161,41 @@ namespace Smonch.CyclopsFramework
             _finishedRoutines.Clear();
             _additions.Clear();
             _removals.Clear();
-            _stopsRequested.Clear();
+            _stopRequests.Clear();
             _messages.Clear();
-            _pausesRequested.Clear();
-            _resumesRequested.Clear();
-            _blocksRequested.Clear();
+            _pauseRequests.Clear();
+            _resumeRequests.Clear();
+            _blockingRequests.Clear();
 
-            _nextAdditionIsImmediate = false;
+            _isNextAdditionImmediate = false;
 
             MaxNestingDepth = 1;
         }
         
         // Sequencing Additions
 
+        /// <summary>
+        /// This adds <see cref="CyclopsRoutine"/> to the engine for use on the next frame.
+        /// It is possibly the most commonly used method in the entire framework.
+        /// </summary>
         T ICyclopsRoutineScheduler.Add<T>(T routine)
         {
-            Assert.IsNotNull(routine);
+            Debug.Assert(routine is not null);
 
             routine.Host = this;
 
-            if (_nextAdditionIsImmediate)
+            if (_isNextAdditionImmediate)
             {
-                _nextAdditionIsImmediate = false;
+                _isNextAdditionImmediate = false;
 
                 if (Context is null)
                     routine.NestingDepth = 1;
                 else
                     routine.NestingDepth = Context.NestingDepth + 1;
                 
-                Assert.IsTrue(routine.NestingDepth <= MaxNestingDepth,
+                Debug.Assert(routine.NestingDepth <= MaxNestingDepth,
                     $"Couldn't add {nameof(routine)}:{routine.GetType()} because nesting depth was exceeded. MaxNestingDepth: {MaxNestingDepth} Actual: {routine.NestingDepth}");
-
+                
                 if (routine.NestingDepth <= MaxNestingDepth)
                     ProcessAddition(routine);
             }
@@ -151,71 +207,74 @@ namespace Smonch.CyclopsFramework
             return routine;
         }
 
-        public void AddTaggable(ICyclopsTaggable o)
+        /// <summary>
+        /// This registers <see cref="ICyclopsTaggable"/> objects with the engine.
+        /// Use <see cref="Add"/> for <see cref="CyclopsRoutine"/>s. 
+        /// </summary>
+        /// <param name="taggable">target</param>
+        public void AddTaggable(ICyclopsTaggable taggable)
         {
-            Assert.IsTrue(ValidateTaggable(o, out string reason), reason);
-            Register(o);
+            Debug.Assert(ValidateTaggable(taggable, out string reason), reason);
+            Register(taggable);
         }
 
         // Control Flow
         
+        /// <summary>
+        /// Pause any routines with the specified tag.
+        /// Please see the order of operations in <see cref="Update"/> for more information.
+        /// </summary>
+        /// <param name="tag">registered tag</param>
         // ReSharper disable once MemberCanBePrivate.Global
         public void Pause(string tag)
         {
-            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
-            _pausesRequested.Add(tag);
-        }
-
-        public void Pause(IEnumerable<string> tags)
-        {
-            foreach (string tag in tags)
-                Pause(tag);
+            Debug.Assert(ValidateTag(tag, out string reason), reason);
+            _pauseRequests.Add(tag);
         }
         
+        /// <summary>
+        /// Resume any routines with the specified tag that were previously paused.
+        /// Please see the order of operations in <see cref="Update"/> for more information.
+        /// </summary>
+        /// <param name="tag">registered tag</param>
         // ReSharper disable once MemberCanBePrivate.Global
         public void Resume(string tag)
         {
-            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
-            _resumesRequested.Add(tag);
+            Debug.Assert(ValidateTag(tag, out string reason), reason);
+            _resumeRequests.Add(tag);
         }
         
-        public void Resume(IEnumerable<string> tags)
-        {
-            foreach (string tag in tags)
-                Resume(tag);
-        }
-        
+        /// <summary>
+        /// Prevent any new additions with the specified tag from being added this frame.
+        /// </summary>
+        /// <param name="tag">registered tag</param>
         // ReSharper disable once MemberCanBePrivate.Global
         public void Block(string tag)
         {
-            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
-            _blocksRequested.Add(tag);
-        }
-
-        public void Block(IEnumerable<string> tags)
-        {
-            foreach (string tag in tags)
-                Block(tag);
+            Debug.Assert(ValidateTag(tag, out string reason), reason);
+            _blockingRequests.Add(tag);
         }
         
+        /// <summary>
+        /// Remove a CyclopsRoutine or other ICyclopsTaggable by tag.
+        /// </summary>
+        /// <param name="tag">registered tag</param>
+        /// <param name="willStopChildren">If this is a CyclopsRoutine, will children be skipped?</param>
         // ReSharper disable once MemberCanBePrivate.Global
         public void Remove(string tag, bool willStopChildren = true)
         {
-            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
-            _stopsRequested.Enqueue(new CyclopsStopRoutineRequest(tag, willStopChildren));
+            Debug.Assert(ValidateTag(tag, out string reason), reason);
+            _stopRequests.Enqueue(new CyclopsStopRoutineRequest(tag, willStopChildren));
         }
         
-        // ReSharper disable once MemberCanBePrivate.Global
-        public void Remove(IEnumerable<string> tags, bool willStopChildren = true)
-        {
-            foreach (string tag in tags)
-                Remove(tag, willStopChildren);
-        }
-        
+        /// <summary>
+        /// Remove a CyclopsRoutine or other ICyclopsTaggable by reference.
+        /// </summary>
+        /// <param name="taggedObject">ICyclopsTaggable such as CyclopsRoutine</param>
         // ReSharper disable once MemberCanBePrivate.Global
         public void Remove(ICyclopsTaggable taggedObject)
         {
-            Assert.IsTrue(ValidateTaggable(taggedObject, out string reason), reason);
+            Debug.Assert(ValidateTaggable(taggedObject, out string reason), reason);
             
             if (taggedObject is CyclopsRoutine routine)
                 routine.Stop();
@@ -227,7 +286,7 @@ namespace Smonch.CyclopsFramework
 
         private void Register(ICyclopsTaggable taggedObject)
         {
-            Assert.IsTrue(ValidateTaggable(taggedObject, out string reason), reason);
+            Debug.Assert(ValidateTaggable(taggedObject, out string reason), reason);
 
             void AddToTaggables(string tag)
             {
@@ -251,7 +310,7 @@ namespace Smonch.CyclopsFramework
 
         private void Unregister(ICyclopsTaggable taggedObject)
         {
-            Assert.IsTrue(ValidateTaggable(taggedObject, out string reason), reason);
+            Debug.Assert(ValidateTaggable(taggedObject, out string reason), reason);
 
             void RemoveFromTaggables(string tag)
             {
@@ -275,10 +334,15 @@ namespace Smonch.CyclopsFramework
                 RemoveFromTaggables(tag);
         }
         
+        /// <summary>
+        /// Query the number of objects currently registered with the specified tag.
+        /// </summary>
+        /// <param name="tag">registered tag</param>
+        /// <returns>Number of objets found.</returns>
         // ReSharper disable once MemberCanBePrivate.Global
         public int Count(string tag)
         {
-            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
+            Debug.Assert(ValidateTag(tag, out string reason), reason);
 
             int result = 0;
 
@@ -288,6 +352,11 @@ namespace Smonch.CyclopsFramework
             return result;
         }
 
+        /// <summary>
+        /// Check whether anything is currently registered with the specified tag.
+        /// </summary>
+        /// <param name="tag">registered tag</param>
+        /// <returns>Result</returns>
         public bool Exists(string tag)
         {
             return Count(tag) > 0;
@@ -334,6 +403,9 @@ namespace Smonch.CyclopsFramework
         
         // Messaging
 
+        /// <summary>
+        /// Send a <see cref="CyclopsMessage"/> to all <see cref="ICyclopsMessageInterceptor"/> objects registered with a given tag.
+        /// </summary>
         public void Send(string receiverTag, string name, object sender = null, object data = null,
             CyclopsMessage.DeliveryStage stage = CyclopsMessage.DeliveryStage.AfterRoutines)
         {
@@ -352,11 +424,14 @@ namespace Smonch.CyclopsFramework
             Send(msg);
         }
         
+        /// <summary>
+        /// Send a <see cref="CyclopsMessage"/> to all <see cref="ICyclopsMessageInterceptor"/> objects registered with a given tag.
+        /// </summary>
         // ReSharper disable once MemberCanBePrivate.Global
         public void Send(CyclopsMessage msg)
         {
-            Assert.IsNotNull(msg.sender, "Sender must not be null.");
-            Assert.IsTrue(ValidateTag(msg.receiverTag, out string reason), reason);
+            Debug.Assert(msg.sender is not null, "Sender must not be null.");
+            Debug.Assert(ValidateTag(msg.receiverTag, out string reason), reason);
 
             _messages.Enqueue(msg);
         }
@@ -368,7 +443,7 @@ namespace Smonch.CyclopsFramework
 
         private void ProcessRoutines(float deltaTime)
         {
-            Assert.IsTrue(ValidateTimingValue(deltaTime, out string reason), reason);
+            Debug.Assert(ValidateTimingValue(deltaTime, out string reason), reason);
             
             while (_routines.Count > 0)
             {
@@ -420,9 +495,9 @@ namespace Smonch.CyclopsFramework
 
         private void ProcessStopRequests()
         {
-            for (int i = 0; i < _stopsRequested.Count; ++i)
+            for (int i = 0; i < _stopRequests.Count; ++i)
             {
-                CyclopsStopRoutineRequest request = _stopsRequested.Dequeue();
+                CyclopsStopRoutineRequest request = _stopRequests.Dequeue();
                 
                 if (!_registry.ContainsKey(request.routineTag))
                     continue;
@@ -479,11 +554,11 @@ namespace Smonch.CyclopsFramework
                     // Before adding tags, check each child to see if any of its tags are actively being blocked.
                     // If we're in the clear, the child inherits the parents cascading tags and is added to the Additions queue.
 
-                    if (_blocksRequested.Count > 0)
+                    if (_blockingRequests.Count > 0)
                     {
                         foreach (CyclopsRoutine child in routine.Children)
                         {
-                            if (_blocksRequested.Overlaps(child.Tags))
+                            if (_blockingRequests.Overlaps(child.Tags))
                                 continue;
                             
                             foreach (string tag in routine.Tags)
@@ -521,7 +596,7 @@ namespace Smonch.CyclopsFramework
         {
             // Check to see if a candidate has a tag that is actively being blocked.
             // If so, don't add it; instead, continue with the next candidate.
-            if (_blocksRequested.Overlaps(additionCandidate.Tags))
+            if (_blockingRequests.Overlaps(additionCandidate.Tags))
                 return;
             
             if (additionCandidate is CyclopsRoutine addition)
@@ -539,13 +614,13 @@ namespace Smonch.CyclopsFramework
 
         private void ProcessResumeRequests()
         {
-            foreach (string tag in _resumesRequested)
+            foreach (string tag in _resumeRequests)
                 if (_registry.TryGetValue(tag, out var resumptionCandidates))
                     foreach (ICyclopsTaggable candidate in resumptionCandidates)
                         if (candidate is ICyclopsPausable pausable)
                             pausable.IsPaused = false;
 
-            _resumesRequested.Clear();
+            _resumeRequests.Clear();
         }
 
         // Q. Why aren't paused items removed from the update list for efficiency?
@@ -554,21 +629,28 @@ namespace Smonch.CyclopsFramework
         // Fragmentation makes a placeholder solution unlikely.
         private void ProcessPauseRequests()
         {
-            foreach (string tag in _pausesRequested)
+            foreach (string tag in _pauseRequests)
                 if (_registry.TryGetValue(tag, out var pausationCandidates))
                     foreach (ICyclopsTaggable candidate in pausationCandidates)
                         if (candidate is ICyclopsPausable pausable)
                             pausable.IsPaused = true;
 
-            _pausesRequested.Clear();
+            _pauseRequests.Clear();
         }
         
+        /// <summary>
+        /// <para>This is the main update method that drives CyclopsEngine and it is expected to be called once per frame.
+        /// It uses delta time and it's important to note that MaxDeltaTime is limited to 1/4 of a second.</para>
+        /// <para>This method can be driven using either real time or fixed time depending on what is needed.</para>
+        /// <para><b>Please take a look under the hood.<br/>The ORDER OF EXECUTION is VERY IMPORTANT.</b></para>
+        /// </summary>
+        /// <param name="deltaTime"></param>
         public void Update(float deltaTime)
         {
-            Assert.IsFalse(_nextAdditionIsImmediate, "CyclopsEngine should not currently be in immediate additions mode.  Add() should follow the use of Immediately.");
-            _nextAdditionIsImmediate = false;
+            Debug.Assert(!_isNextAdditionImmediate, "CyclopsEngine should not currently be in immediate additions mode.  Add() should follow the use of Immediately.");
+            _isNextAdditionImmediate = false;
 
-            Assert.IsTrue(ValidateTimingValue(deltaTime, out string reason), reason);
+            Debug.Assert(ValidateTimingValue(deltaTime, out string reason), reason);
             
             DeltaTime = Mathf.Clamp(deltaTime, float.Epsilon, MaxDeltaTime);
             
@@ -589,7 +671,7 @@ namespace Smonch.CyclopsFramework
             ProcessResumeRequests();
             ProcessPauseRequests();
             // Clear blocking tags that were used to filter out additions that might have otherwise been added this frame.
-            _blocksRequested.Clear();
+            _blockingRequests.Clear();
         }
     }
 }

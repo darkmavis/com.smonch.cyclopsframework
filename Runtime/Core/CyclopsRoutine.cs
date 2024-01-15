@@ -17,14 +17,13 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Assertions;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsRoutine : CyclopsCommon, ICyclopsDisposable, ICyclopsPausable, ICyclopsTaggable, ICyclopsRoutineScheduler
     {
-        // ReSharper disable once InconsistentNaming - ReSharper isn't happy with standard C# naming conventions.
+        // ReSharper disable once InconsistentNaming - ReSharper isn't happy with idiomatic C#.
         private static CyclopsPool<CyclopsRoutine> s_pool;
         
         // This is important for in-editor situations where domain reloading is disabled.
@@ -52,7 +51,11 @@ namespace Smonch.CyclopsFramework
         /// Use of Next will never trigger this situation. Always use Next unless you know what you are doing.
         /// </summary>
         internal int NestingDepth { get; set; }
-
+        
+        /// <summary>
+        /// Not every routine needs to be recycled when pooled.
+        /// Don't use this unless you're sure about it.
+        /// </summary>
         protected bool MustRecycleIfPooled { get; set; } = true;
 
         /// <summary>
@@ -61,53 +64,104 @@ namespace Smonch.CyclopsFramework
         /// Any usage is external to CyclopsRoutine.
         /// </summary>
         public Func<bool> SkipPredicate { get; set; }
-
+        
+        /// <summary>
+        /// Age is measured as Cycle + Position.
+        /// </summary>
         public double Age { get; private set; }
-
+        
+        /// <summary>
+        /// The period is the time in seconds between cycles.
+        /// </summary>
         public double Period { get; protected set; }
-
+        
+        /// <summary>
+        /// This is the current cycle. Cycles are whole numbers.
+        /// </summary>
         public double Cycle { get; private set; }
 
+        /// <summary>
+        /// This is the maximum number of cycles and has the option to be fractional. Half is a valid value.
+        /// Example: If t => abs(sin(t * Tau)) was used to animate blinking then 3 blinks would use 1.5 cycles.
+        /// </summary>
         public double MaxCycles { get; protected set; }
 
-        public double Position { get => (((Age - Cycle) >= 1.0) ? 1.0 : (Age - Cycle)); }
-
+        /// <summary>
+        /// Position is a normalized value between 0 and 1 and can be thought of as progress in between cycles.
+        /// It can be calculated as Age - Cycle.
+        /// </summary>
+        public double Position => ((Age - Cycle) >= 1.0) ? 1.0 : (Age - Cycle);
+        
+        /// <summary>
+        /// Speed is a multiplier that can be used to speed up or slow down a routine.
+        /// This can be especially useful when multiple cycles are involved.
+        /// </summary>
         public double Speed { get; set; }
 
-        // Pooled
+        /// <summary>
+        /// Tags can be used when manipulating routines by tags in various ways from CyclopsEngine.
+        /// Routines can contain multiple tags that cascade down through all child routines that follow.
+        /// Cascading is optional. Prefix a tag with a ! character to prevent cascading.
+        /// Tags will be registered with CyclopsEngine when a routine is added to the active queue.
+        /// Note: This collection is pooled.
+        /// </summary>
         public IEnumerable<string> Tags { get; private set; }
 
-        // Pooled
+        /// <summary>
+        /// Multiple child routines can be sequenced to immediately follow this one.
+        /// They will be added to the active queue in the order that they are sequenced.
+        /// Although typically appearing as a simple sequence, the routine graph is actually a tree structure.
+        /// Note: This collection is pooled.
+        /// </summary>
         public List<CyclopsRoutine> Children { get; private set; }
-
+        
         /// <summary>
         /// This provides a reference to the CyclopsEngine host.
         /// </summary>
         internal CyclopsEngine Host { get; set; }
         
+        /// <summary>
+        /// Routines can be paused and resumed, typically by tag, using CyclopsEngine.
+        /// </summary>
         public virtual bool IsPaused { get; set; }
-
-        public bool IsActive { get; private set; } = true;
+        
+        internal bool IsActive { get; private set; } = true;
+        
+        /// <summary>
+        /// Was the first frame in the first cycle just entered?
+        /// Note: This is called before OnEnter.
+        /// </summary>
         public bool WasEntered { get; private set; }
 
         public CyclopsNext Next => CyclopsNext.Rent(this);
 
+        /// <summary>
+        /// Instantiate a CyclopsRoutine with the default settings.
+        /// </summary>
         protected CyclopsRoutine()
-            => Initialize(0, 1, null);
+            => Initialize(0d, 1d, null);
 
+        /// <summary>
+        /// This will create a new Routine vs instantiating from a pool.
+        /// Depending on your needs, either way is fine.
+        /// </summary>
+        /// <param name="period">is the time in seconds between cycles.</param>
+        /// <param name="maxCycles">is the maximum cycles and is optionally fractional (half is valid.)</param>
+        /// <param name="ease">is an f(t) easing function. Default: Easing.Linear</param>
         public CyclopsRoutine(double period, double maxCycles, Func<float, float> ease = null)
             => Initialize(period, maxCycles, ease);
         
         /// <summary>
-        /// TODO: !!!
+        /// This provides a common way to initialize a CyclopsRoutine and is used by the reinitialization process
+        /// when instantiating from a pool.
         /// </summary>
         /// <param name="period">is the time in seconds between cycles.</param>
         /// <param name="maxCycles">is the maximum cycles and is optionally fractional (half is valid.)</param>
         /// <param name="ease">is an f(t) easing function. Default: Easing.Linear</param>
         protected void Initialize(double period, double maxCycles, Func<float, float> ease)
         {
-            Assert.IsTrue(ValidateTimingValueWhereZeroIsOk(period, out string reason), reason);
-            Assert.IsTrue(ValidateTimingValue(maxCycles, out reason), reason);
+            Debug.Assert(ValidateTimingValueWhereZeroIsOk(period, out string reason), reason);
+            Debug.Assert(ValidateTimingValue(maxCycles, out reason), reason);
 
             Context = this;
             MaxCycles = maxCycles;
@@ -197,7 +251,7 @@ namespace Smonch.CyclopsFramework
         /// <returns>T : CyclopsRoutine</returns>
         T ICyclopsRoutineScheduler.Add<T>(T routine)
         {
-            Assert.IsNotNull(routine);
+            Debug.Assert(routine is not null);
             Children.Add(routine);
 
             return routine;
@@ -214,7 +268,7 @@ namespace Smonch.CyclopsFramework
         /// <returns>CyclopsRoutine</returns>
         public CyclopsRoutine AddTag(string tag)
         {
-            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
+            Debug.Assert(ValidateTag(tag, out string reason), reason);
 
             if (Tags is not HashSet<string>)
                 Tags = HashSetPool<string>.Get();
@@ -255,7 +309,7 @@ namespace Smonch.CyclopsFramework
         /// <returns>CyclopsRoutine</returns>
         public CyclopsRoutine Repeat(double cycles)
         {
-            Assert.IsTrue(ValidateTimingValue(cycles, out string reason), reason);
+            Debug.Assert(ValidateTimingValue(cycles, out string reason), reason);
             MaxCycles = cycles;
 
             return this;
@@ -331,7 +385,7 @@ namespace Smonch.CyclopsFramework
         /// <returns>CyclopsRoutine</returns>
         public CyclopsRoutine OnFailure(Action failureHandler)
         {
-            Assert.IsNotNull(failureHandler);
+            Debug.Assert(failureHandler is not null);
             FailureHandler = failureHandler;
 
             return this;
@@ -359,6 +413,10 @@ namespace Smonch.CyclopsFramework
             IsActive = false;
         }
         
+        /// <summary>
+        /// CyclopsEngine uses this update method to drive the routine.
+        /// </summary>
+        /// <param name="deltaTime"></param>
         internal void Update(float deltaTime)
         {
             // Not asserting deltaTime here.

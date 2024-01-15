@@ -103,11 +103,25 @@ namespace Smonch.CyclopsFramework
         public CyclopsWaitForMessage Listen(string receiverTag, string messageName, double timeout, double maxCycles = 1)
             => Add(CyclopsWaitForMessage.Instantiate(receiverTag, messageName, timeout, maxCycles));
         
-        public CyclopsWaitForEvent WaitForEvent(ref Action multicastDelegate, double timeout = double.MaxValue, double maxCycles = 1.0, Action handler = null)
+        public CyclopsWaitForEvent WaitForEvent(ref Action multicastDelegate,
+            double timeout = double.MaxValue, double maxCycles = 1.0, Action handler = null)
             => Add(CyclopsWaitForEvent.Instantiate(ref multicastDelegate, timeout, maxCycles, handler));
         
-        public CyclopsWaitForEvent<T> WaitForEvent<T>(ref Action<T> multicastDelegate, double timeout = double.MaxValue, double maxCycles = 1.0, Action<T> handler = null)
+        public CyclopsWaitForEvent<T> WaitForEvent<T>(ref Action<T> multicastDelegate,
+            double timeout = double.MaxValue, double maxCycles = 1.0, Action<T> handler = null)
             => Add(CyclopsWaitForEvent<T>.Instantiate(ref multicastDelegate, timeout, maxCycles, handler));
+        
+        public CyclopsWaitForEvent<T1, T2> WaitForEvent<T1, T2>(ref Action<T1, T2> multicastDelegate,
+            double timeout = double.MaxValue, double maxCycles = 1.0, Action<T1, T2> handler = null)
+            => Add(CyclopsWaitForEvent<T1, T2>.Instantiate(ref multicastDelegate, timeout, maxCycles, handler));
+        
+        public CyclopsWaitForEvent<T1, T2, T3> WaitForEvent<T1, T2, T3>(ref Action<T1, T2, T3> multicastDelegate,
+            double timeout = double.MaxValue, double maxCycles = 1.0, Action<T1, T2, T3> handler = null)
+            => Add(CyclopsWaitForEvent<T1, T2, T3>.Instantiate(ref multicastDelegate, timeout, maxCycles, handler));
+        
+        public CyclopsWaitForEvent<T1, T2, T3, T4> WaitForEvent<T1, T2, T3, T4>(ref Action<T1, T2, T3, T4> multicastDelegate,
+            double timeout = double.MaxValue, double maxCycles = 1.0, Action<T1, T2, T3, T4> handler = null)
+            => Add(CyclopsWaitForEvent<T1, T2, T3, T4>.Instantiate(ref multicastDelegate, timeout, maxCycles, handler));
         
         public CyclopsTask WaitForTask(Action<CyclopsTask> f)
             => Add(CyclopsTask.Instantiate(f));

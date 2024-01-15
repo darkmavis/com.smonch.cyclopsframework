@@ -20,10 +20,15 @@ namespace Smonch.CyclopsFramework
 {
     public abstract class CyclopsCommon
     {
+        /// <summary> All tagged objects contain this tag. </summary>
         public const string TagAll = "*";
         public const string TagPrefixNoncascading = "!";
         public const float MaxDeltaTime = .25f;
         
+        /// <summary>
+        /// This gets the current <see cref="CyclopsRoutine"/>.
+        /// It's very useful when used from within anonymous functions.
+        /// </summary>
         public CyclopsRoutine Context { get; protected set; }
 
         /// <summary>
