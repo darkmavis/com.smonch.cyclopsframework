@@ -26,12 +26,55 @@ This project dates back over a decade and was heavily inspired by [Cyclops Frame
 from the 2010-2012 [Flash/AS3](https://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/index.html) era.
 The AS3 framework was inspired by previous work dating back to 2007.
 
-# Coming Soon: Awaitable Integration
+# New: Awaitable Integration
 
-While currently compatible with async/await, tight integration between Cyclops state machines and Awaitable is on the way.
+[CyclopsBaseState](./Runtime/States/CyclopsBaseState.cs) now supports the following
+[Awaitable](https://docs.unity3d.com/2023.2/Documentation/ScriptReference/Awaitable.html)
+methods with automatic cancellation token handling:
+</br>```
+public async Awaitable FixedUpdateAsync()```
+</br>```
+public async Awaitable FromAsyncOperation(AsyncOperation op)```
+</br>```
+public async Awaitable NextFrameAsync()```
+</br>```
+public async Awaitable EndOfFrameAsync()```
+```csharp
+public async Awaitable WaitForSecondsAsync(float seconds)
+{
+    try
+    {
+        await Awaitable.WaitForSecondsAsync(seconds, ExitCancellationToken);
+    }
+    catch (OperationCanceledException)
+    {
+        // ignored
+    }
+}
+```
+
+States were already compatible with async/await, but now have tight integration with Unity's Awaitable as well.
 The aim is to make Awaitable easier to use and more robust than it currently is with tight state machine integration.
-Awaitable currently requires manually tracking cancellation tokens or handling exceptions because it doesn't have proper state information.
-Cyclops state machines naturally provide that information and will handle all Awaitable methods automatically.
+Awaitable by itself currently requires manually tracking cancellation tokens or handling exceptions because it doesn't have proper state information.
+Cyclops state machines naturally provide that information and will now wrap and handle all state management for the Awaitable methods automatically.
+Behind the scenes, when a state is entered, a new CancellationToken is created. When a state exits, the CancellationToken is canceled.
+
+```csharp
+var loader = new CyclopsState();
+loader.Entered = async () =>
+{
+    Debug.Log("Loader: Entered");
+    
+    for (int i = 0; i < 10 && loader.IsActive; ++i)
+    {
+        await loader.WaitForSecondsAsync(1f);
+        Debug.Log($"Loader: {i}");
+    }
+    
+    loader.Stop();
+};
+loader.Exited = () => Debug.Log("Loader: Exited");
+```
 
 # Installing Cyclops Framework
 

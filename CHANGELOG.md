@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.14.0] - 2024-01-15
+
+- Added CyclopsBaseState support for Unity's Awaitable methods. See README.md for details.
+- Added CyclopsWaitForAction which supports cleanly waiting for an Action<> to be invoked.
+- Added code documentation. It's a start.
+
 ## [0.13.1] - 2024-01-09
 
 - Added JumpTo(age) to CyclopsRoutine. It will allow jumping to a specific age. (Cycle + Position)
