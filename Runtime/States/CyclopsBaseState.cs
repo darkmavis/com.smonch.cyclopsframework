@@ -36,8 +36,8 @@ namespace Smonch.CyclopsFramework
         private CancellationTokenSource _exitCancellationTokenSource = new();
 
         // ReSharper disable once MemberCanBePrivate.Global
-        public CancellationToken ExitCancellationToken { get; private set; } = default;
-        internal bool IsActive { get; private set; }
+        public CancellationToken ExitCancellationToken { get; private set; }
+        public bool IsActive { get; private set; }
         internal bool IsStopping { get; private set; }
 
         /// <summary>
@@ -85,7 +85,6 @@ namespace Smonch.CyclopsFramework
         public void Stop()
         {
             IsStopping = true;
-            
         }
         
         /// <summary>
@@ -118,7 +117,7 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         public void AddExitTransition(CyclopsBaseState target)
         {
-            AddTransition(new CyclopsStateTransition { Target = target, Condition = () => !IsActive});
+            AddTransition(new CyclopsStateTransition { Target = target, Condition = () => !IsActive });
         }
         
         /// <summary>
@@ -238,6 +237,201 @@ namespace Smonch.CyclopsFramework
             catch (OperationCanceledException)
             {
                 // ignored
+            }
+        }
+        
+        public void AddTransition(CyclopsBaseState target, ref Action multicastDelegate)
+        {
+            Action localMulticastDelegate = null;
+            bool wasTriggered = false;
+            
+            AddTransition(new CyclopsStateTransition { Target = target, Condition = () => wasTriggered} );
+            
+            multicastDelegate += OnAction;
+            localMulticastDelegate = multicastDelegate;
+            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+
+            return;
+            
+            void OnAction()
+            {
+                wasTriggered = true;
+                // ReSharper disable once AccessToModifiedClosure
+                localMulticastDelegate -= OnAction;
+            }
+        }
+        
+        public void AddTransition<T>(CyclopsBaseState target, ref Action<T> multicastDelegate)
+        {
+            Action<T> localMulticastDelegate = null;
+            bool wasTriggered = false;
+            
+            AddTransition(new CyclopsStateTransition { Target = target, Condition = () => wasTriggered} );
+            
+            multicastDelegate += OnAction;
+            localMulticastDelegate = multicastDelegate;
+            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+
+            return;
+            
+            void OnAction(T x)
+            {
+                wasTriggered = true;
+                // ReSharper disable once AccessToModifiedClosure
+                localMulticastDelegate -= OnAction;
+            }
+        }
+        
+        public void AddTransition<T1, T2>(CyclopsBaseState target, ref Action<T1, T2> multicastDelegate)
+        {
+            Action<T1, T2> localMulticastDelegate = null;
+            bool wasTriggered = false;
+            
+            AddTransition(new CyclopsStateTransition { Target = target, Condition = () => wasTriggered} );
+            
+            multicastDelegate += OnAction;
+            localMulticastDelegate = multicastDelegate;
+            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+
+            return;
+            
+            void OnAction(T1 x, T2 y)
+            {
+                wasTriggered = true;
+                // ReSharper disable once AccessToModifiedClosure
+                localMulticastDelegate -= OnAction;
+            }
+        }
+        
+        public void AddTransition<T1, T2, T3>(CyclopsBaseState target, ref Action<T1, T2, T3> multicastDelegate)
+        {
+            Action<T1, T2, T3> localMulticastDelegate = null;
+            bool wasTriggered = false;
+            
+            AddTransition(new CyclopsStateTransition { Target = target, Condition = () => wasTriggered} );
+            
+            multicastDelegate += OnAction;
+            localMulticastDelegate = multicastDelegate;
+            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+
+            return;
+            
+            void OnAction(T1 x, T2 y, T3 z)
+            {
+                wasTriggered = true;
+                // ReSharper disable once AccessToModifiedClosure
+                localMulticastDelegate -= OnAction;
+            }
+        }
+        
+        public void AddTransition<T1, T2, T3, T4>(CyclopsBaseState target, ref Action<T1, T2, T3, T4> multicastDelegate)
+        {
+            Action<T1, T2, T3, T4> localMulticastDelegate = null;
+            bool wasTriggered = false;
+            
+            AddTransition(new CyclopsStateTransition { Target = target, Condition = () => wasTriggered} );
+            
+            multicastDelegate += OnAction;
+            localMulticastDelegate = multicastDelegate;
+            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+
+            return;
+            
+            void OnAction(T1 x, T2 y, T3 z, T4 w)
+            {
+                wasTriggered = true;
+                // ReSharper disable once AccessToModifiedClosure
+                localMulticastDelegate -= OnAction;
+            }
+        }
+        
+        public void ExitOnAction(ref Action multicastDelegate)
+        {
+            Action localMulticastDelegate = null;
+            
+            multicastDelegate += OnAction;
+            localMulticastDelegate = multicastDelegate;
+            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+
+            return;
+            
+            void OnAction()
+            {
+                // ReSharper disable once AccessToModifiedClosure
+                localMulticastDelegate -= OnAction;
+                Stop();
+            }
+        }
+        
+        public void ExitOnAction<T>(ref Action<T> multicastDelegate)
+        {
+            Action<T> localMulticastDelegate = null;
+            
+            multicastDelegate += OnAction;
+            localMulticastDelegate = multicastDelegate;
+            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+
+            return;
+            
+            void OnAction(T x)
+            {
+                // ReSharper disable once AccessToModifiedClosure
+                localMulticastDelegate -= OnAction;
+                Stop();
+            }
+        }
+        
+        public void ExitOnAction<T1, T2>(ref Action<T1, T2> multicastDelegate)
+        {
+            Action<T1, T2> localMulticastDelegate = null;
+            
+            multicastDelegate += OnAction;
+            localMulticastDelegate = multicastDelegate;
+            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+
+            return;
+            
+            void OnAction(T1 x, T2 y)
+            {
+                // ReSharper disable once AccessToModifiedClosure
+                localMulticastDelegate -= OnAction;
+                Stop();
+            }
+        }
+        
+        public void ExitOnAction<T1, T2, T3>(ref Action<T1, T2, T3> multicastDelegate)
+        {
+            Action<T1, T2, T3> localMulticastDelegate = null;
+            
+            multicastDelegate += OnAction;
+            localMulticastDelegate = multicastDelegate;
+            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+
+            return;
+            
+            void OnAction(T1 x, T2 y, T3 z)
+            {
+                // ReSharper disable once AccessToModifiedClosure
+                localMulticastDelegate -= OnAction;
+                Stop();
+            }
+        }
+        
+        public void ExitOnAction<T1, T2, T3, T4>(ref Action<T1, T2, T3, T4> multicastDelegate)
+        {
+            Action<T1, T2, T3, T4> localMulticastDelegate = null;
+            
+            multicastDelegate += OnAction;
+            localMulticastDelegate = multicastDelegate;
+            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+
+            return;
+            
+            void OnAction(T1 x, T2 y, T3 z, T4 w)
+            {
+                // ReSharper disable once AccessToModifiedClosure
+                localMulticastDelegate -= OnAction;
+                Stop();
             }
         }
     }

@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2024 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,17 +14,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using UnityEngine.Serialization;
+
 namespace Smonch.CyclopsFramework
 {
     internal struct CyclopsStopRoutineRequest
     {
-        public string routineTag;
-        public bool stopChildren;
+        public readonly string RoutineTag;
+        public readonly bool StopChildren;
 
         public CyclopsStopRoutineRequest(string routineTag, bool stopChildren)
         {
-            this.routineTag = routineTag;
-            this.stopChildren = stopChildren;
+            RoutineTag = routineTag;
+            StopChildren = stopChildren;
         }
     }
 }

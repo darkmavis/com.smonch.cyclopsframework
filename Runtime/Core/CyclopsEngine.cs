@@ -1,6 +1,6 @@
 // Cyclops Framework
 // 
-// Copyright 2010 - 2023 Mark Davis
+// Copyright 2010 - 2024 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -374,8 +374,8 @@ namespace Smonch.CyclopsFramework
             {
                 CyclopsTagStatus status;
                 
-                status.tag = tag;
-                status.count = Count(tag);
+                status.Tag = tag;
+                status.Count = Count(tag);
 
                 results.Add(status);
             }
@@ -413,12 +413,12 @@ namespace Smonch.CyclopsFramework
 
             var msg = new CyclopsMessage
             {
-                receiverTag = receiverTag,
-                name = name,
-                sender = sender,
-                data = data,
-                stage = stage,
-                isBroadcast = false
+                ReceiverTag = receiverTag,
+                Name = name,
+                Sender = sender,
+                Data = data,
+                Stage = stage,
+                IsBroadcast = false
             };
 
             Send(msg);
@@ -430,8 +430,8 @@ namespace Smonch.CyclopsFramework
         // ReSharper disable once MemberCanBePrivate.Global
         public void Send(CyclopsMessage msg)
         {
-            Debug.Assert(msg.sender is not null, "Sender must not be null.");
-            Debug.Assert(ValidateTag(msg.receiverTag, out string reason), reason);
+            Debug.Assert(msg.Sender is not null, "Sender must not be null.");
+            Debug.Assert(ValidateTag(msg.ReceiverTag, out string reason), reason);
 
             _messages.Enqueue(msg);
         }
@@ -476,13 +476,13 @@ namespace Smonch.CyclopsFramework
             {
                 var msg = _messages.Dequeue();
 
-                if ((msg.stage != CyclopsMessage.DeliveryStage.SoonestPossible) && (msg.stage != stage))
+                if ((msg.Stage != CyclopsMessage.DeliveryStage.SoonestPossible) && (msg.Stage != stage))
                 {
                     _messages.Enqueue(msg);
                     continue;
                 }
 
-                if (!_registry.TryGetValue(msg.receiverTag, out var taggables))
+                if (!_registry.TryGetValue(msg.ReceiverTag, out var taggables))
                     continue;
                 
                 foreach (ICyclopsTaggable possibleReceiver in taggables)
@@ -499,16 +499,16 @@ namespace Smonch.CyclopsFramework
             {
                 CyclopsStopRoutineRequest request = _stopRequests.Dequeue();
                 
-                if (!_registry.ContainsKey(request.routineTag))
+                if (!_registry.ContainsKey(request.RoutineTag))
                     continue;
                 
-                foreach (ICyclopsTaggable taggable in _registry[request.routineTag])
+                foreach (ICyclopsTaggable taggable in _registry[request.RoutineTag])
                 {
                     if (taggable is CyclopsRoutine routine)
                     {
                         routine.Stop();
                             
-                        if (request.stopChildren)
+                        if (request.StopChildren)
                             routine.RemoveAllChildren();
                     }
                     else

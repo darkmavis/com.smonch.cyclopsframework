@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2023 Mark Davis
+// Copyright 2010 - 2024 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,25 +15,26 @@
 // limitations under the License.
 
 using System;
+using UnityEngine.Serialization;
 
 namespace Smonch.CyclopsFramework
 {
     public struct CyclopsTagStatus : IComparable<CyclopsTagStatus>
     {
-        public string tag;
-        public int count;
+        public string Tag;
+        public int Count;
 
         int IComparable<CyclopsTagStatus>.CompareTo(CyclopsTagStatus other)
         {
-            if ((tag != null) && (other.tag != null))
+            if ((Tag != null) && (other.Tag != null))
             {
-                if (tag.StartsWith("*"))
+                if (Tag.StartsWith("*"))
                     return -1;
-                else if (other.tag.StartsWith("*"))
+                else if (other.Tag.StartsWith("*"))
                     return 1;
             }
 
-            return string.CompareOrdinal(tag, other.tag);
+            return string.CompareOrdinal(Tag, other.Tag);
         }
     }
 }

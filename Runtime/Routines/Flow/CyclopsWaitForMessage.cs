@@ -1,6 +1,6 @@
 ﻿// Cyclops Framework
 // 
-// Copyright 2010 - 2023 Mark Davis
+// Copyright 2010 - 2024 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ namespace Smonch.CyclopsFramework
 
         void ICyclopsMessageInterceptor.InterceptMessage(CyclopsMessage msg)
         {
-            if ((_messageName == null) || (_messageName == msg.name))
+            if ((_messageName == null) || (_messageName == msg.Name))
             {
                 _timedOut = false;
                 SuccessHandler?.Invoke(msg);

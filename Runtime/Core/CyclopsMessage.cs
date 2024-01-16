@@ -1,6 +1,6 @@
 // Cyclops Framework
 // 
-// Copyright 2010 - 2022 Mark Davis
+// Copyright 2010 - 2024 Mark Davis
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,15 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using UnityEngine.Serialization;
+
 namespace Smonch.CyclopsFramework
 {
 	public struct CyclopsMessage
 	{
-        public string receiverTag;
-        public string name;
-        public object data;
-        public object sender;
-        public bool isBroadcast;
+        public string ReceiverTag;
+        public string Name;
+        public object Data;
+        public object Sender;
+        public bool IsBroadcast;
 
         public enum DeliveryStage
         {
@@ -31,6 +33,6 @@ namespace Smonch.CyclopsFramework
             SoonestPossible
         }
 
-        public DeliveryStage stage;
+        public DeliveryStage Stage;
     }
 }

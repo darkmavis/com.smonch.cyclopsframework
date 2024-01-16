@@ -39,9 +39,7 @@ namespace Smonch.CyclopsFramework
         // ReSharper disable once MemberCanBePrivate.Global
         protected Func<float, float> Ease { get; set; }
         
-        /// <summary>
-        /// This provides a way to gracefully handle failures such as timeouts when waiting for an event or polling for a particular state.
-        /// </summary>
+        /// <summary> This provides a way to gracefully handle failures such as timeouts when waiting for an event or polling for a particular state. </summary>
         private Action FailureHandler { get; set; }
         
         /// <summary>
@@ -52,9 +50,7 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         internal int NestingDepth { get; set; }
         
-        /// <summary>
-        /// Not every routine needs to be recycled when pooled.
-        /// Don't use this unless you're sure about it.
+        /// <summary> Not every routine needs to be recycled when pooled. Don't use this unless you're sure about it.
         /// </summary>
         protected bool MustRecycleIfPooled { get; set; } = true;
 
@@ -65,19 +61,13 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         public Func<bool> SkipPredicate { get; set; }
         
-        /// <summary>
-        /// Age is measured as Cycle + Position.
-        /// </summary>
+        /// <summary> Age is measured as Cycle + Position. </summary>
         public double Age { get; private set; }
         
-        /// <summary>
-        /// The period is the time in seconds between cycles.
-        /// </summary>
+        /// <summary> The period is the time in seconds between cycles. </summary>
         public double Period { get; protected set; }
         
-        /// <summary>
-        /// This is the current cycle. Cycles are whole numbers.
-        /// </summary>
+        /// <summary> This is the current cycle. Cycles are whole numbers. </summary>
         public double Cycle { get; private set; }
 
         /// <summary>
@@ -86,16 +76,10 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         public double MaxCycles { get; protected set; }
 
-        /// <summary>
-        /// Position is a normalized value between 0 and 1 and can be thought of as progress in between cycles.
-        /// It can be calculated as Age - Cycle.
-        /// </summary>
+        /// <summary> Position is a normalized value between 0 and 1 and can be thought of as progress in between cycles. It can be calculated as Age - Cycle. </summary>
         public double Position => ((Age - Cycle) >= 1.0) ? 1.0 : (Age - Cycle);
         
-        /// <summary>
-        /// Speed is a multiplier that can be used to speed up or slow down a routine.
-        /// This can be especially useful when multiple cycles are involved.
-        /// </summary>
+        /// <summary> Speed is a multiplier that can be used to speed up or slow down a routine. This can be especially useful when multiple cycles are involved. </summary>
         public double Speed { get; set; }
 
         /// <summary>
@@ -115,36 +99,24 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         public List<CyclopsRoutine> Children { get; private set; }
         
-        /// <summary>
-        /// This provides a reference to the CyclopsEngine host.
-        /// </summary>
+        /// <summary> This provides a reference to the CyclopsEngine host. </summary>
         internal CyclopsEngine Host { get; set; }
         
-        /// <summary>
-        /// Routines can be paused and resumed, typically by tag, using CyclopsEngine.
-        /// </summary>
+        /// <summary> Routines can be paused and resumed, typically by tag, using CyclopsEngine. </summary>
         public virtual bool IsPaused { get; set; }
         
         internal bool IsActive { get; private set; } = true;
         
-        /// <summary>
-        /// Was the first frame in the first cycle just entered?
-        /// Note: This is called before OnEnter.
-        /// </summary>
+        /// <summary> Was the first frame in the first cycle just entered? Note: This is called before OnEnter. </summary>
         public bool WasEntered { get; private set; }
 
         public CyclopsNext Next => CyclopsNext.Rent(this);
 
-        /// <summary>
-        /// Instantiate a CyclopsRoutine with the default settings.
-        /// </summary>
+        /// <summary> Instantiate a CyclopsRoutine with the default settings. </summary>
         protected CyclopsRoutine()
             => Initialize(0d, 1d, null);
 
-        /// <summary>
-        /// This will create a new Routine vs instantiating from a pool.
-        /// Depending on your needs, either way is fine.
-        /// </summary>
+        /// <summary> This will create a new Routine vs instantiating from a pool. Depending on your needs, either way is fine. </summary>
         /// <param name="period">is the time in seconds between cycles.</param>
         /// <param name="maxCycles">is the maximum cycles and is optionally fractional (half is valid.)</param>
         /// <param name="ease">is an f(t) easing function. Default: Easing.Linear</param>
@@ -293,18 +265,13 @@ namespace Smonch.CyclopsFramework
             return (T)this;
         }
         
-        /// <summary>
-        /// Ensure that any routine scheduled to follow this one, will not run.
-        /// </summary>
+        /// <summary> Ensure that any routine scheduled to follow this one, will not run. </summary>
         public void RemoveAllChildren()
         {
             Children?.Clear();
         }
         
-        /// <summary>
-        /// This will alter the maximum number of cycles that a routine will run for.
-        /// CAUTION: Some routines should not be altered.
-        /// </summary>
+        /// <summary> This will alter the maximum number of cycles that a routine will run for. CAUTION: Some routines should not be altered. </summary>
         /// <param name="cycles"></param>
         /// <returns>CyclopsRoutine</returns>
         public CyclopsRoutine Repeat(double cycles)
@@ -315,19 +282,14 @@ namespace Smonch.CyclopsFramework
             return this;
         }
         
-        /// <summary>
-        /// This will NOT RESET the routine to its initial state.
-        /// This will only reset the age and cycle to zero.
-        /// </summary>
+        /// <summary> This will NOT RESET the routine to its initial state. This will only reset the age and cycle to zero. </summary>
         public void Restart()
         {
             Cycle = 0d;
             Age = 0d;
         }
         
-        /// <summary>
-        /// If the predicate is satisfied then this routine and all of its children will be skipped.
-        /// </summary>
+        /// <summary> If the predicate is satisfied then this routine and all of its children will be skipped. </summary>
         /// <param name="predicate"> checks to see if this routine should be skipped.</param>
         /// <returns>CyclopsRoutine</returns>
         public CyclopsRoutine SkipIf(Func<bool> predicate)
@@ -336,10 +298,7 @@ namespace Smonch.CyclopsFramework
             return Context;
         }
         
-        /// <summary>
-        /// This will force an OnUpdate(t=0) call immediately after FirstFrame is called for the first time.
-        /// This implies that two calls to OnUpdate(t) will occur on that frame.
-        /// </summary>
+        /// <summary> This will force an OnUpdate(t=0) call immediately after FirstFrame is called for the first time. This implies that two calls to OnUpdate(t) will occur on that frame. </summary>
         /// <returns>CyclopsRoutine</returns>
         public CyclopsRoutine SyncAtStart()
         {
@@ -348,19 +307,14 @@ namespace Smonch.CyclopsFramework
             return this;
         }
 
-        /// <summary>
-        /// Jump to the beginning of the next cycle.
-        /// </summary>
+        /// <summary> Jump to the beginning of the next cycle. </summary>
         public void StepForward()
         {
             Age = Math.Ceiling(Age);
             Cycle = Age;
         }
         
-        /// <summary>
-        /// Jumps to age which is Cycle + Position.
-        /// Position is a normalized value between 0 and 1.
-        /// </summary>
+        /// <summary> Jumps to age which is Cycle + Position. Position is a normalized value between 0 and 1. </summary>
         /// <param name="age"></param>
         public void JumpTo(double age)
         {
@@ -368,9 +322,7 @@ namespace Smonch.CyclopsFramework
             Cycle = Math.Floor(age);
         }
         
-        /// <summary>
-        /// Call the optional failure handler, remove all children, and stop.
-        /// </summary>
+        /// <summary> Call the optional failure handler, remove all children, and stop. </summary>
         protected void Fail()
         {
             FailureHandler?.Invoke();
@@ -378,9 +330,7 @@ namespace Smonch.CyclopsFramework
             Stop();
         }
         
-        /// <summary>
-        /// Add an optional failure handler for routines that require one.
-        /// </summary>
+        /// <summary> Add an optional failure handler for routines that require one. </summary>
         /// <param name="failureHandler"></param>
         /// <returns>CyclopsRoutine</returns>
         public CyclopsRoutine OnFailure(Action failureHandler)
@@ -391,10 +341,7 @@ namespace Smonch.CyclopsFramework
             return this;
         }
         
-        /// <summary>
-        /// Stop this routine and optionally force calls to OnLastFrame and OnExit.
-        /// OnExit is called by default.
-        /// </summary>
+        /// <summary> Stop this routine and optionally force calls to OnLastFrame and OnExit. OnExit is called by default. </summary>
         /// <param name="callLastFrame"></param>
         /// <param name="callExit"></param>
         public void Stop(bool callLastFrame = false, bool callExit = true)
@@ -413,9 +360,7 @@ namespace Smonch.CyclopsFramework
             IsActive = false;
         }
         
-        /// <summary>
-        /// CyclopsEngine uses this update method to drive the routine.
-        /// </summary>
+        /// <summary> CyclopsEngine uses this update method to drive the routine. </summary>
         /// <param name="deltaTime"></param>
         internal void Update(float deltaTime)
         {
@@ -504,36 +449,23 @@ namespace Smonch.CyclopsFramework
             }
         }
         
-        /// <summary>
-        /// Override to react to the first frame of the first cycle.
-        /// </summary>
+        /// <summary> Override to react to the first frame of the first cycle. </summary>
         protected virtual void OnEnter() { }
         
-        /// <summary>
-        /// Override to react to the first frame of each cycle.
-        /// </summary>
+        /// <summary> Override to react to the first frame of each cycle. </summary>
         protected virtual void OnFirstFrame() { }
         
-        /// <summary>
-        /// Override to react to each frame of each cycle.
-        /// This is useful for interpolation and progress tracking.
-        /// </summary>
+        /// <summary> Override to react to each frame of each cycle. This is useful for interpolation and progress tracking. </summary>
         /// <param name="t">is a normalized value between 0 and 1.</param>
         protected virtual void OnUpdate(float t) { }
         
-        /// <summary>
-        /// Override to react to the last frame of each cycle or optionally when Stop is called.
-        /// </summary>
+        /// <summary> Override to react to the last frame of each cycle or optionally when Stop is called. </summary>
         protected virtual void OnLastFrame() { }
         
-        /// <summary>
-        /// Override to react to the last frame of the last cycle or by optional default when Stop is called.
-        /// </summary>
+        /// <summary> Override to react to the last frame of the last cycle or by optional default when Stop is called. </summary>
         protected virtual void OnExit() { }
         
-        /// <summary>
-        /// If and only if pooling is utilized, be sure to override this method to reset state before releasing to the pool.
-        /// </summary>
+        /// <summary> If and only if pooling is utilized, be sure to override this method to reset state before releasing to the pool. </summary>
         /// <exception cref="NotImplementedException"></exception>
         protected virtual void OnRecycle()
         {
