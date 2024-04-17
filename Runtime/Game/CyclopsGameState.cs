@@ -24,20 +24,12 @@ namespace Smonch.CyclopsFramework
         // ReSharper disable once MemberCanBePrivate.Global
         protected CyclopsEngine Engine { get; } = GenericPool<CyclopsEngine>.Get();
         
-        // ReSharper disable once MemberCanBePrivate.Global
-        protected CyclopsEngine FixedEngine { get; } = GenericPool<CyclopsEngine>.Get();
-        
         protected virtual float DeltaTime => Time.deltaTime;
-        protected virtual float FixedDeltaTime => Time.fixedDeltaTime;
         
-        internal sealed override void Update(CyclopsStateUpdateContext updateContext)
+        internal sealed override void Update()
         {
-            OnUpdate(updateContext);
-            
-            if (updateContext.UpdateSystem == CyclopsGame.UpdateSystem.FixedUpdate)
-                FixedEngine.Update(FixedDeltaTime);
-            else if (updateContext.UpdateSystem == CyclopsGame.UpdateSystem.Update)
-                Engine.Update(DeltaTime);
+            base.Update();
+            Engine.Update(DeltaTime);
         }
 
         protected override void Dispose(bool isDisposing)
@@ -46,9 +38,6 @@ namespace Smonch.CyclopsFramework
             
             Engine.Reset();
             GenericPool<CyclopsEngine>.Release(Engine);
-            
-            FixedEngine.Reset();
-            GenericPool<CyclopsEngine>.Release(FixedEngine);
         }
     }
 }

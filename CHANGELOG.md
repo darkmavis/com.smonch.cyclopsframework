@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.15.0] - 2024-04-16
+
+- Simplified CyclopsStateMachine and CyclopsGame. They are manually driven now.
+- CyclopsStateMachine and CyclopsBaseState handle a wider degree of situations.
+
 ## [0.14.0] - 2024-01-15
 
 - Added CyclopsBaseState support for Unity's Awaitable methods. See README.md for details.

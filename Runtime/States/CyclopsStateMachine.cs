@@ -15,108 +15,114 @@
 // limitations under the License.
 
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Smonch.CyclopsFramework
 {
     public class CyclopsStateMachine
     {
         private readonly LinkedList<CyclopsBaseState> _stateLinkedStack = new();
+        private readonly Queue<CyclopsBaseState> _pushQueue = new();
         private CyclopsBaseState _nextState;
         private bool _isForceStopping;
         
         public CyclopsBaseState Context { get; private set; }
+        public bool IsIdle => _stateLinkedStack.Count == 0;
         
-        public bool IsIdle { get; private set; }
+        private CyclopsBaseState TopState => _stateLinkedStack.Last.Value;
 
-        public void PushState(CyclopsBaseState baseState)
+        public void PushState(CyclopsBaseState state)
         {
-            _stateLinkedStack.AddLast(baseState);
+            state.IsForegroundState = true;
+            _pushQueue.Enqueue(state);
         }
 
         public void ForceStop()
         {
-            while (_stateLinkedStack.Count > 0)
+            _pushQueue.Clear();
+            
+            while (_stateLinkedStack.Count != 0)
             {
-                _stateLinkedStack.Last.Value.StopImmediately();
+                TopState.StopImmediately();
                 _stateLinkedStack.RemoveLast();
             }
 
             _isForceStopping = true;
         }
 
-        // ReSharper disable once MemberCanBeProtected.Global
         public void Update()
         {
-            Update(CyclopsGame.UpdateSystem.Update);
-            Update(CyclopsGame.UpdateSystem.CyclopsStateMachinePostUpdate);
-        }
-
-        internal void Update(CyclopsGame.UpdateSystem updateSystem)
-        {
-            if (_stateLinkedStack.Count == 0)
+            while (_pushQueue.TryDequeue(out CyclopsBaseState state))
             {
-                IsIdle = true;
+                _stateLinkedStack.AddLast(state);
+            }
+
+            if (IsIdle)
+                return;
+            
+            CyclopsBaseState topState = TopState;
+            
+            foreach (CyclopsBaseState backgroundState in _stateLinkedStack)
+            {
+                if (backgroundState == topState)
+                    continue;
+                
+                // Could set this to null later, but would rather not.
+                Context = backgroundState;
+                
+                // In case of pushing multiple states onto the stack quickly.
+                if (!backgroundState.IsActive)
+                {
+                    // We'll say this is a foreground state, but it won't be for long.
+                    backgroundState.IsForegroundState = true;
+                    backgroundState.Start(); // <-- calls: OnEnter
+                }
+
+                if (backgroundState.IsForegroundState)
+                {
+                    backgroundState.IsForegroundState = false;
+                    backgroundState.JustEnteredBackgroundMode = true;
+                }
+                
+                backgroundState.Update();
+
+                if (_isForceStopping)
+                    return;
+            }
+
+            Context = topState;
+
+            if (!topState.IsActive)
+                topState.Start();
+            
+            if (topState.QueryTransitions(out _nextState))
+            {
+                topState.Stop();
             }
             else
             {
-                IsIdle = false;
-
-                CyclopsBaseState topState = _stateLinkedStack.Last.Value;
-                
-                Context = topState;
-                
-                if (updateSystem == CyclopsGame.UpdateSystem.CyclopsStateMachinePostUpdate)
+                if (!topState.IsForegroundState)
                 {
-                    if (topState.IsStopping)
-                    {
-                        topState.StopImmediately();
-                        _stateLinkedStack.RemoveLast();
-                        
-                        if (_nextState is null)
-                            topState.QueryTransitions(out _nextState);
-                    }
-
-                    if (_nextState is not null)
-                        _stateLinkedStack.AddLast(_nextState);
-
-                    return;
+                    topState.IsForegroundState = true;
+                    topState.JustExitedBackgroundMode = true;
                 }
                 
-                foreach (CyclopsBaseState state in _stateLinkedStack)
-                {
-                    if (state == topState)
-                        continue;
-                    
-                    // Could set this to null later, but would rather not.
-                    Context = state;
-                    
-                    // In case of pushing multiple states onto the stack quickly.
-                    if (!state.IsActive)
-                        state.Start();
-                    
-                    state.Update(new CyclopsStateUpdateContext { UpdateSystem = updateSystem, IsLayered = true });
-
-                    if (_isForceStopping)
-                        return;
-                }
-
-                Context = topState;
-
-                if (!topState.IsActive)
-                    topState.Start();
+                topState.Update();
                 
                 if (topState.QueryTransitions(out _nextState))
-                {
                     topState.Stop();
-                }
-                else
-                {
-                    topState.Update(new CyclopsStateUpdateContext { UpdateSystem = updateSystem, IsLayered = false });
-                    
-                    if (topState.QueryTransitions(out _nextState))
-                        topState.Stop();
-                }
             }
+            
+            if (topState.IsStopping)
+            {
+                topState.StopImmediately();
+                _stateLinkedStack.RemoveLast();
+            }
+
+            if (_nextState is null)
+                return;
+            
+            PushState(_nextState);
         }
     }
 }

@@ -81,7 +81,7 @@ namespace Smonch.CyclopsFramework
         {
             string nopTag = nameof(CyclopsNop);
 
-            Host.NextFrame.Nop(nopTag);
+            Host.NextFrame.Nop().AddTag(nopTag);
             Host.Update(deltaTime);
 
             Assert.NotZero(Host.Count(nopTag));
@@ -164,7 +164,7 @@ namespace Smonch.CyclopsFramework
             [Values(nameof(CyclopsNop))] string tag,
             [Values(MaxDeltaTime)] float deltaTime)
         {
-            Host.NextFrame.Nop(tag);
+            Host.NextFrame.Nop().AddTag(tag);
             Host.Update(deltaTime);
 
             Assert.NotZero(Host.Count(tag));
@@ -177,7 +177,7 @@ namespace Smonch.CyclopsFramework
             [Values(ValidTag)] string tag,
             [Values(MaxDeltaTime)] float deltaTime)
         {
-            Host.NextFrame.Nop(tag: tag);
+            Host.NextFrame.Nop().AddTag(tag);
             Host.Update(deltaTime);
 
             Assert.NotZero(Host.Count(tag));

@@ -38,7 +38,7 @@ namespace Smonch.CyclopsFramework
 			_fd = null;
 		}
 
-		public void InterceptMessage (CyclopsMessage msg)
+		public void InterceptMessage(CyclopsMessage msg)
 		{
 			_fd(msg);
 		}

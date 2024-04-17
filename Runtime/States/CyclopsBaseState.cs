@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
@@ -39,7 +40,10 @@ namespace Smonch.CyclopsFramework
         public CancellationToken ExitCancellationToken { get; private set; }
         public bool IsActive { get; private set; }
         internal bool IsStopping { get; private set; }
-
+        internal bool IsForegroundState { get; set; }
+        internal bool JustEnteredBackgroundMode { get; set; }
+        internal bool JustExitedBackgroundMode { get; set; }
+        
         /// <summary>
         /// <see cref="Start"/> is called by the host state machine and should not be otherwise called.
         /// <seealso cref="CyclopsStateMachine"/>
@@ -59,13 +63,30 @@ namespace Smonch.CyclopsFramework
         /// See <see cref="CyclopsState"/> for example usage. 
         /// <seealso cref="CyclopsStateMachine"/>
         /// </summary>
-        internal virtual void Update(CyclopsStateUpdateContext updateContext)
+        internal virtual void Update()
         {
-            OnUpdate(updateContext);
+            if (JustEnteredBackgroundMode)
+            {
+                OnEnterBackgroundMode();
+                JustEnteredBackgroundMode = false;
+            }
+            
+            // Probably could be an else if, but if the state machine changed, this could be safer.
+            if (JustExitedBackgroundMode)
+            {
+                OnExitBackgroundMode();
+                JustExitedBackgroundMode = false;
+            }
+            
+            if (IsForegroundState)
+                OnUpdate();
+            else
+                OnBackgroundUpdate();
         }
         
         internal void StopImmediately()
         {
+            //Debug.Log($"Immediately Stopping State: {Name}");
             bool wasActive = IsActive;
             
             IsActive = false;
@@ -84,6 +105,7 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         public void Stop()
         {
+            //Debug.Log($"Stopping State: {Name}");
             IsStopping = true;
         }
         
@@ -117,7 +139,7 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         public void AddExitTransition(CyclopsBaseState target)
         {
-            AddTransition(new CyclopsStateTransition { Target = target, Condition = () => !IsActive });
+            AddTransition(new CyclopsStateTransition { Target = target, Condition = () => IsStopping || !IsActive });
         }
         
         /// <summary>
@@ -142,26 +164,45 @@ namespace Smonch.CyclopsFramework
         }
 
         /// <summary>
-        /// <see cref="OnEnter"/> is invoked any time this state is entered.
-        /// A state can not be re-entered until it has exited.
+        /// <see cref="OnEnter"/> is invoked when this state is entered.
+        /// A state can not be entered more than once.
         /// <seealso cref="CyclopsStateMachine"/>
         /// </summary>
         protected virtual void OnEnter() { }
+        
+        /// <summary>
+        /// <see cref="OnExit"/> is invoked once when this state is exited.
+        /// A state can not be exited until after it is entered.
+        /// A state must be re-entered to exit again.
+        /// <seealso cref="CyclopsStateMachine"/>
+        /// </summary>
+        protected virtual void OnExit() { }
         
         /// <summary>
         /// <see cref="OnUpdate"/> is invoked when this state is the active state in the state machine's stack.
         /// If this is the only state, then <see cref="OnUpdate"/> will always be invoked.
         /// <seealso cref="CyclopsStateMachine"/>
         /// </summary>
-        protected virtual void OnUpdate(CyclopsStateUpdateContext updateContext) { }
+        protected virtual void OnUpdate() { }
         
         /// <summary>
-        /// <see cref="OnExit"/> is invoked any time this state is exited.
-        /// A state can not be exited until after it is entered.
-        /// A state must be re-entered to exit again.
+        /// <see cref="OnBackgroundUpdate"/> is invoked when this state IS NOT the active state in the state machine's stack.
+        /// If this is the only state, then <see cref="OnBackgroundUpdate"/> will NEVER be invoked.
         /// <seealso cref="CyclopsStateMachine"/>
         /// </summary>
-        protected virtual void OnExit() { }
+        protected virtual void OnBackgroundUpdate() { }
+        
+        /// <summary>
+        /// <see cref="OnEnterBackgroundMode"/> is invoked each time this state becomes a background state.
+        /// <seealso cref="CyclopsStateMachine"/>
+        /// </summary>
+        protected virtual void OnEnterBackgroundMode() { }
+        
+        /// <summary>
+        /// <see cref="OnEnterBackgroundMode"/> is invoked each time this state becomes a foreground state again.
+        /// <seealso cref="CyclopsStateMachine"/>
+        /// </summary>
+        protected virtual void OnExitBackgroundMode() { }
         
         /// <summary>
         /// Only use this if you need it. The base class uses <see cref="Dispose"/> to release internally allocated objects to a pool.
@@ -249,7 +290,7 @@ namespace Smonch.CyclopsFramework
             
             multicastDelegate += OnAction;
             localMulticastDelegate = multicastDelegate;
-            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+            Assert.IsNotNull(localMulticastDelegate, "Multicast delegate must not be null.");
 
             return;
             
@@ -270,7 +311,7 @@ namespace Smonch.CyclopsFramework
             
             multicastDelegate += OnAction;
             localMulticastDelegate = multicastDelegate;
-            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+            Assert.IsNotNull(localMulticastDelegate, "Multicast delegate must not be null.");
 
             return;
             
@@ -291,7 +332,7 @@ namespace Smonch.CyclopsFramework
             
             multicastDelegate += OnAction;
             localMulticastDelegate = multicastDelegate;
-            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+            Assert.IsNotNull(localMulticastDelegate, "Multicast delegate must not be null.");
 
             return;
             
@@ -312,7 +353,7 @@ namespace Smonch.CyclopsFramework
             
             multicastDelegate += OnAction;
             localMulticastDelegate = multicastDelegate;
-            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+            Assert.IsNotNull(localMulticastDelegate, "Multicast delegate must not be null.");
 
             return;
             
@@ -333,7 +374,7 @@ namespace Smonch.CyclopsFramework
             
             multicastDelegate += OnAction;
             localMulticastDelegate = multicastDelegate;
-            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+            Assert.IsNotNull(localMulticastDelegate, "Multicast delegate must not be null.");
 
             return;
             
@@ -351,7 +392,7 @@ namespace Smonch.CyclopsFramework
             
             multicastDelegate += OnAction;
             localMulticastDelegate = multicastDelegate;
-            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+            Assert.IsNotNull(localMulticastDelegate, "Multicast delegate must not be null.");
 
             return;
             
@@ -369,7 +410,7 @@ namespace Smonch.CyclopsFramework
             
             multicastDelegate += OnAction;
             localMulticastDelegate = multicastDelegate;
-            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+            Assert.IsNotNull(localMulticastDelegate, "Multicast delegate must not be null.");
 
             return;
             
@@ -387,7 +428,7 @@ namespace Smonch.CyclopsFramework
             
             multicastDelegate += OnAction;
             localMulticastDelegate = multicastDelegate;
-            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+            Assert.IsNotNull(localMulticastDelegate, "Multicast delegate must not be null.");
 
             return;
             
@@ -405,7 +446,7 @@ namespace Smonch.CyclopsFramework
             
             multicastDelegate += OnAction;
             localMulticastDelegate = multicastDelegate;
-            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+            Assert.IsNotNull(localMulticastDelegate, "Multicast delegate must not be null.");
 
             return;
             
@@ -423,7 +464,7 @@ namespace Smonch.CyclopsFramework
             
             multicastDelegate += OnAction;
             localMulticastDelegate = multicastDelegate;
-            Debug.Assert(localMulticastDelegate is not null, "Multicast delegate must not be null.");
+            Assert.IsNotNull(localMulticastDelegate, "Multicast delegate must not be null.");
 
             return;
             

@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
@@ -132,8 +133,8 @@ namespace Smonch.CyclopsFramework
         /// <param name="ease">is an f(t) easing function. Default: Easing.Linear</param>
         protected void Initialize(double period, double maxCycles, Func<float, float> ease)
         {
-            Debug.Assert(ValidateTimingValueWhereZeroIsOk(period, out string reason), reason);
-            Debug.Assert(ValidateTimingValue(maxCycles, out reason), reason);
+            Assert.IsTrue(ValidateTimingValueWhereZeroIsOk(period, out string reason), reason);
+            Assert.IsTrue(ValidateTimingValue(maxCycles, out reason), reason);
 
             Context = this;
             MaxCycles = maxCycles;
@@ -223,7 +224,7 @@ namespace Smonch.CyclopsFramework
         /// <returns>T : CyclopsRoutine</returns>
         T ICyclopsRoutineScheduler.Add<T>(T routine)
         {
-            Debug.Assert(routine is not null);
+            Assert.IsNotNull(routine);
             Children.Add(routine);
 
             return routine;
@@ -240,7 +241,7 @@ namespace Smonch.CyclopsFramework
         /// <returns>CyclopsRoutine</returns>
         public CyclopsRoutine AddTag(string tag)
         {
-            Debug.Assert(ValidateTag(tag, out string reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
 
             if (Tags is not HashSet<string>)
                 Tags = HashSetPool<string>.Get();
@@ -276,7 +277,7 @@ namespace Smonch.CyclopsFramework
         /// <returns>CyclopsRoutine</returns>
         public CyclopsRoutine Repeat(double cycles)
         {
-            Debug.Assert(ValidateTimingValue(cycles, out string reason), reason);
+            Assert.IsTrue(ValidateTimingValue(cycles, out string reason), reason);
             MaxCycles = cycles;
 
             return this;
@@ -335,7 +336,7 @@ namespace Smonch.CyclopsFramework
         /// <returns>CyclopsRoutine</returns>
         public CyclopsRoutine OnFailure(Action failureHandler)
         {
-            Debug.Assert(failureHandler is not null);
+            Assert.IsNotNull(failureHandler);
             FailureHandler = failureHandler;
 
             return this;
