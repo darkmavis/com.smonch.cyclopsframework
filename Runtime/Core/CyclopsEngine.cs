@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.Pool;
 
 namespace Smonch.CyclopsFramework
@@ -180,8 +181,8 @@ namespace Smonch.CyclopsFramework
         /// </summary>
         T ICyclopsRoutineScheduler.Add<T>(T routine)
         {
-            Debug.Assert(routine is not null);
-
+            Assert.IsNotNull(routine);
+            
             routine.Host = this;
 
             if (_isNextAdditionImmediate)
@@ -193,7 +194,7 @@ namespace Smonch.CyclopsFramework
                 else
                     routine.NestingDepth = Context.NestingDepth + 1;
                 
-                Debug.Assert(routine.NestingDepth <= MaxNestingDepth,
+                Assert.IsTrue(routine.NestingDepth <= MaxNestingDepth,
                     $"Couldn't add {nameof(routine)}:{routine.GetType()} because nesting depth was exceeded. MaxNestingDepth: {MaxNestingDepth} Actual: {routine.NestingDepth}");
                 
                 if (routine.NestingDepth <= MaxNestingDepth)
@@ -214,7 +215,7 @@ namespace Smonch.CyclopsFramework
         /// <param name="taggable">target</param>
         public void AddTaggable(ICyclopsTaggable taggable)
         {
-            Debug.Assert(ValidateTaggable(taggable, out string reason), reason);
+            Assert.IsTrue(ValidateTaggable(taggable, out string reason), reason);
             Register(taggable);
         }
 
@@ -228,7 +229,7 @@ namespace Smonch.CyclopsFramework
         // ReSharper disable once MemberCanBePrivate.Global
         public void Pause(string tag)
         {
-            Debug.Assert(ValidateTag(tag, out string reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
             _pauseRequests.Add(tag);
         }
         
@@ -240,7 +241,7 @@ namespace Smonch.CyclopsFramework
         // ReSharper disable once MemberCanBePrivate.Global
         public void Resume(string tag)
         {
-            Debug.Assert(ValidateTag(tag, out string reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
             _resumeRequests.Add(tag);
         }
         
@@ -251,7 +252,7 @@ namespace Smonch.CyclopsFramework
         // ReSharper disable once MemberCanBePrivate.Global
         public void Block(string tag)
         {
-            Debug.Assert(ValidateTag(tag, out string reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
             _blockingRequests.Add(tag);
         }
         
@@ -263,7 +264,7 @@ namespace Smonch.CyclopsFramework
         // ReSharper disable once MemberCanBePrivate.Global
         public void Remove(string tag, bool willStopChildren = true)
         {
-            Debug.Assert(ValidateTag(tag, out string reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
             _stopRequests.Enqueue(new CyclopsStopRoutineRequest(tag, willStopChildren));
         }
         
@@ -274,7 +275,7 @@ namespace Smonch.CyclopsFramework
         // ReSharper disable once MemberCanBePrivate.Global
         public void Remove(ICyclopsTaggable taggedObject)
         {
-            Debug.Assert(ValidateTaggable(taggedObject, out string reason), reason);
+            Assert.IsTrue(ValidateTaggable(taggedObject, out string reason), reason);
             
             if (taggedObject is CyclopsRoutine routine)
                 routine.Stop();
@@ -286,7 +287,7 @@ namespace Smonch.CyclopsFramework
 
         private void Register(ICyclopsTaggable taggedObject)
         {
-            Debug.Assert(ValidateTaggable(taggedObject, out string reason), reason);
+            Assert.IsTrue(ValidateTaggable(taggedObject, out string reason), reason);
 
             void AddToTaggables(string tag)
             {
@@ -310,7 +311,7 @@ namespace Smonch.CyclopsFramework
 
         private void Unregister(ICyclopsTaggable taggedObject)
         {
-            Debug.Assert(ValidateTaggable(taggedObject, out string reason), reason);
+            Assert.IsTrue(ValidateTaggable(taggedObject, out string reason), reason);
 
             void RemoveFromTaggables(string tag)
             {
@@ -342,7 +343,7 @@ namespace Smonch.CyclopsFramework
         // ReSharper disable once MemberCanBePrivate.Global
         public int Count(string tag)
         {
-            Debug.Assert(ValidateTag(tag, out string reason), reason);
+            Assert.IsTrue(ValidateTag(tag, out string reason), reason);
 
             int result = 0;
 
@@ -430,8 +431,8 @@ namespace Smonch.CyclopsFramework
         // ReSharper disable once MemberCanBePrivate.Global
         public void Send(CyclopsMessage msg)
         {
-            Debug.Assert(msg.Sender is not null, "Sender must not be null.");
-            Debug.Assert(ValidateTag(msg.ReceiverTag, out string reason), reason);
+            Assert.IsNotNull(msg.Sender, "Sender must not be null.");
+            Assert.IsTrue(ValidateTag(msg.ReceiverTag, out string reason), reason);
 
             _messages.Enqueue(msg);
         }
@@ -443,7 +444,7 @@ namespace Smonch.CyclopsFramework
 
         private void ProcessRoutines(float deltaTime)
         {
-            Debug.Assert(ValidateTimingValue(deltaTime, out string reason), reason);
+            Assert.IsTrue(ValidateTimingValue(deltaTime, out string reason), reason);
             
             while (_routines.Count > 0)
             {
@@ -647,10 +648,10 @@ namespace Smonch.CyclopsFramework
         /// <param name="deltaTime"></param>
         public void Update(float deltaTime)
         {
-            Debug.Assert(!_isNextAdditionImmediate, "CyclopsEngine should not currently be in immediate additions mode.  Add() should follow the use of Immediately.");
+            Assert.IsTrue(!_isNextAdditionImmediate, "CyclopsEngine should not currently be in immediate additions mode.  Add() should follow the use of Immediately.");
             _isNextAdditionImmediate = false;
 
-            Debug.Assert(ValidateTimingValue(deltaTime, out string reason), reason);
+            Assert.IsTrue(ValidateTimingValue(deltaTime, out string reason), reason);
             
             DeltaTime = Mathf.Clamp(deltaTime, float.Epsilon, MaxDeltaTime);
             

@@ -1,3 +1,19 @@
+// Cyclops Framework
+// 
+// Copyright 2010 - 2024 Mark Davis
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+// http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 using System;
 
 namespace Smonch.CyclopsFramework
@@ -12,8 +28,7 @@ namespace Smonch.CyclopsFramework
     public class CyclopsState : CyclopsBaseState
     {
         /// <summary>
-        /// <see cref="Entered"/> is invoked any time this state is entered.
-        /// A state can not be re-entered until it has exited.
+        /// <see cref="Entered"/> is invoked when this state is entered.
         /// <seealso cref="CyclopsStateMachine"/>
         /// </summary>
         public Action Entered { get; set; }
@@ -27,36 +42,28 @@ namespace Smonch.CyclopsFramework
         public Action Updating { get; set; }
         
         /// <summary>
-        /// <see cref="LayeredUpdating"/> is invoked when this state sits below other states in the state machine's stack.
-        /// If this is the only state, then <see cref="LayeredUpdating"/> will not invoked.
-        /// <para><br/>Tip: Keep it simple and only use <see cref="LayeredUpdating"/> when background operations are truly essential.
-        /// If this isn't the simplest long-term approach, then try something else.</para>
+        /// <see cref="BackgroundUpdating"/> is invoked when this state sits below other states in the state machine's stack.
+        /// If this is the only state, then <see cref="BackgroundUpdating"/> will not invoked.
         /// <seealso cref="CyclopsStateMachine"/>
         /// <seealso cref="Updating"/>
         /// </summary>
-        public Action LayeredUpdating { get; set;  }
+        public Action BackgroundUpdating { get; set; }
         
         /// <summary>
         /// <see cref="Exited"/> is invoked any time this state is exited.
         /// A state can not be exited until after it is entered.
-        /// A state must be re-entered to exit again.
         /// <seealso cref="CyclopsStateMachine"/>
         /// </summary>
         public Action Exited { get; set; }
         
-        protected override void OnEnter() => Entered?.Invoke();
-
-        internal override void Update(CyclopsStateUpdateContext updateContext)
-        {
-            if (updateContext.UpdateSystem != CyclopsGame.UpdateSystem.Update)
-                return;
-            
-            if (updateContext.IsLayered)
-                LayeredUpdating?.Invoke();
-            else
-                Updating?.Invoke();
-        }
+        public Action BackgroundModeEntered { get; set; }
+        public Action BackgroundModeExited { get; set; }
         
+        protected override void OnEnter() => Entered?.Invoke();
         protected override void OnExit() => Exited?.Invoke();
+        protected override void OnUpdate() => Updating?.Invoke();
+        protected override void OnEnterBackgroundMode() => BackgroundModeEntered?.Invoke();
+        protected override void OnExitBackgroundMode() => BackgroundModeExited?.Invoke();
+        protected override void OnBackgroundUpdate() => BackgroundUpdating?.Invoke();
     }
 }
